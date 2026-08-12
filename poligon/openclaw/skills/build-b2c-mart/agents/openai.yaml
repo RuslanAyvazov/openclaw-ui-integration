@@ -1,0 +1,4 @@
+interface:
+  display_name: "Сборка B2C-витрины"
+  short_description: "Проверка S2T и сборка dm_res для Iceberg/Parquet"
+  default_prompt: "Используй $build-b2c-mart, чтобы проверить S2T и SQL-прототипы и собрать context_config.json и dm_res."

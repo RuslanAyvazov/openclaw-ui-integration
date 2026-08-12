@@ -1,0 +1,23 @@
+{
+  "stats": [
+    {
+      "name": "pk_duplicates",
+      "category": "CountDuplicates",
+      "params": {
+        "column": "${context_config.validator.tables[].primary_key.columns}",
+        "table": "${context_config.validator.tables[].pa_table.name}.branch_dev"
+      },
+      "enabled": true
+    }
+  ],
+  "checks": [
+    {
+      "name": "pk_duplicates__check",
+      "sql_query": "$pk_duplicates = 0",
+      "enabled": true,
+      "blocker": true,
+      "description": "В рабочей ветке dev PA-таблицы отсутствуют дубли по первичному ключу",
+      "create_incident": false
+    }
+  ]
+}

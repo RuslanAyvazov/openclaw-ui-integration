@@ -1,0 +1,20 @@
+node_modules/
+.env
+openclaw.local.json
+backend/data/
+*.log
+frontend/dist/
+__pycache__/
+.venv/
+*.py[cod]
+backend/staticfiles/
+repositories/
+
+# Локальные настройки и инструкции кодовых помощников
+.agents/
+.claude/
+.codex/
+AGENTS.md
+CLAUDE.md
+.replit
+skills-lock.json

@@ -1,0 +1,44 @@
+{
+  "id": "b2c-build-tool",
+  "name": "B2C SQL Project Build Tool",
+  "description": "Build a B2C SQL project from S2T and DML files uploaded to the current agent workspace.",
+  "version": "1.0.0",
+  "configSchema": {
+    "type": "object",
+    "properties": {
+      "skillRoot": {
+        "type": "string",
+        "description": "Absolute path to the installed b2c-sql-project-2-0-builder Skill directory.",
+        "minLength": 1
+      },
+      "timeoutSeconds": {
+        "type": "integer",
+        "description": "Maximum execution time of run_from_files.sh in seconds.",
+        "minimum": 1,
+        "maximum": 3600,
+        "default": 900
+      },
+      "maxLogBytes": {
+        "type": "integer",
+        "description": "Maximum number of bytes retained separately for stdout and stderr.",
+        "minimum": 1024,
+        "maximum": 1048576,
+        "default": 32768
+      }
+    },
+    "additionalProperties": false
+  },
+  "activation": {
+    "onStartup": true
+  },
+  "contracts": {
+    "tools": [
+      "b2c_build_from_upload"
+    ]
+  },
+  "toolMetadata": {
+    "b2c_build_from_upload": {
+      "optional": true
+    }
+  }
+}

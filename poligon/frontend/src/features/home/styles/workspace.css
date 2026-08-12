@@ -1,0 +1,435 @@
+/* ============================================================
+   Modal overlay/container base
+   ============================================================ */
+.modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+}
+.modal-container {
+    background: #fff; border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    overflow: hidden; display: flex; flex-direction: column;
+    max-height: 86vh; width: 90%;
+}
+
+/* ============================================================
+   Workspace Bar
+   ============================================================ */
+.ws-bar {
+    height: 56px; background: #fff;
+    border-bottom: 1px solid #e0e6ef;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    display: flex; align-items: center;
+    padding: 0 24px; flex-shrink: 0;
+    position: relative; z-index: 10;
+}
+.ws-bar-left   { display: flex; align-items: center; flex: 0 0 auto; }
+.ws-bar-sep    { width: 1px; height: 24px; background: #e0e6ef; margin: 0 18px; flex-shrink: 0; }
+.ws-bar-center { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.ws-bar-right  { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+
+.ws-switcher-btn {
+    display: flex; align-items: center; gap: 9px;
+    background: none; border: none; cursor: pointer;
+    padding: 6px 10px 6px 6px; border-radius: 9px;
+    transition: background 0.15s; font: inherit; color: inherit;
+}
+.ws-switcher-btn:hover { background: #f4f6f9; }
+
+.ws-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.ws-name-group { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+.ws-label { font-size: 10px; font-weight: 600; color: #9aa3b2; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1; }
+.ws-name  { font-size: 14px; font-weight: 600; color: #1a252f; line-height: 1.2; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ws-arrow { color: #9aa3b2; font-size: 10px; transition: transform 0.2s; margin-left: 2px; }
+.ws-arrow.open { transform: rotate(180deg); }
+
+.ws-role-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 12px;
+    font-size: 12px; font-weight: 600; white-space: nowrap; flex-shrink: 0;
+}
+.ws-role-badge.admin     { background: rgba(37,99,235,0.1);  color: #2563eb; }
+.ws-role-badge.developer { background: rgba(124,58,237,0.1); color: #7c3aed; }
+.ws-role-badge.analyst   { background: rgba(5,150,105,0.1);  color: #059669; }
+
+.ws-stat     { display: flex; align-items: center; gap: 5px; font-size: 13px; color: #6c757d; white-space: nowrap; }
+.ws-stat i   { font-size: 11px; color: #9aa3b2; }
+.ws-stat-dot { width: 3px; height: 3px; border-radius: 50%; background: #ced4da; flex-shrink: 0; }
+
+.ws-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 7px; font-size: 13px;
+    font-weight: 500; cursor: pointer; border: 1px solid;
+    transition: all 0.15s; white-space: nowrap; font-family: inherit;
+}
+.ws-btn-secondary { background: #fff; border-color: #ced4da; color: #495057; }
+.ws-btn-secondary:hover { background: #f4f6f9; border-color: #adb5bd; color: #2c3e50; }
+.ws-btn-icon {
+    width: 32px; height: 32px; border: 1px solid #ced4da; background: #fff;
+    border-radius: 7px; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: #6c757d; font-size: 13px; transition: all 0.15s;
+}
+.ws-btn-icon:hover { background: #f4f6f9; color: #2c3e50; border-color: #adb5bd; }
+
+/* ============================================================
+   Switcher Dropdown
+   ============================================================ */
+.ws-dropdown {
+    position: absolute; top: calc(100% + 4px); left: 24px;
+    min-width: 288px; background: #fff;
+    border: 1px solid #dee2e6; border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.06);
+    z-index: 200; overflow: hidden;
+    animation: ws-dd-in 0.14s ease-out;
+}
+@keyframes ws-dd-in { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+.ws-dropdown-header { padding: 10px 14px 8px; font-size: 11px; font-weight: 700; color: #9aa3b2; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #f0f2f5; }
+.ws-dropdown-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; transition: background 0.12s; border: none; background: none; width: 100%; font: inherit; text-align: left; border-left: 3px solid transparent; }
+.ws-dropdown-item:hover { background: #f8f9fa; }
+.ws-dropdown-item.active { background: rgba(52,152,219,0.06); border-left-color: #3498db; }
+.ws-dropdown-item-icon { width: 30px; height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0; }
+.ws-dropdown-item-info { flex: 1; min-width: 0; }
+.ws-dropdown-item-name { font-size: 13px; font-weight: 600; color: #2c3e50; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ws-dropdown-item-meta { font-size: 11px; color: #9aa3b2; margin-top: 1px; }
+.ws-dropdown-item-check { color: #3498db; font-size: 13px; flex-shrink: 0; }
+.ws-dropdown-divider { height: 1px; background: #f0f2f5; margin: 4px 0; }
+.ws-dropdown-action { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; border: none; background: none; width: 100%; font: inherit; font-size: 13px; font-weight: 500; color: #3498db; transition: background 0.12s; text-align: left; }
+.ws-dropdown-action:hover { background: #f0f7fd; }
+.ws-dropdown-action i { width: 16px; text-align: center; }
+
+/* ============================================================
+   Content Area
+   ============================================================ */
+.ws-content-area { flex: 1; background: #f0f2f5; overflow-y: auto; padding: 24px; }
+.ws-content-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.ws-content-title { font-size: 15px; font-weight: 600; color: #4a5568; }
+.ws-content-count { font-size: 13px; color: #9aa3b2; }
+
+/* ============================================================
+   Onboarding
+   ============================================================ */
+.ws-onboarding { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 20px 64px; background: #f0f2f5; overflow-y: auto; }
+.ws-onboarding-eyebrow { font-size: 11px; font-weight: 700; color: #3498db; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
+.ws-onboarding-title { font-size: 26px; font-weight: 700; color: #1a252f; margin-bottom: 12px; text-align: center; letter-spacing: -0.3px; }
+.ws-onboarding-sub { font-size: 15px; color: #6c757d; text-align: center; max-width: 460px; line-height: 1.65; margin-bottom: 48px; }
+.ws-onboarding-cards { display: flex; gap: 20px; max-width: 640px; width: 100%; }
+.ws-onboarding-card {
+    flex: 1; background: #fff; border: 1px solid #e0e6ef; border-radius: 16px;
+    padding: 30px 26px; display: flex; flex-direction: column; align-items: flex-start;
+    cursor: pointer; transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+    text-align: left; font: inherit; position: relative; overflow: hidden;
+}
+.ws-onboarding-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.ws-onboarding-card.create::before { background: linear-gradient(90deg, #3498db, #2471a3); }
+.ws-onboarding-card.join::before   { background: linear-gradient(90deg, #27ae60, #1e8449); }
+.ws-onboarding-card:hover { transform: translateY(-4px); border-color: transparent; }
+.ws-onboarding-card.create:hover { box-shadow: 0 12px 32px rgba(52,152,219,0.18); }
+.ws-onboarding-card.join:hover   { box-shadow: 0 12px 32px rgba(39,174,96,0.18); }
+.ws-ob-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 18px; flex-shrink: 0; }
+.ws-onboarding-card.create .ws-ob-icon { background: linear-gradient(135deg, #3498db, #2471a3); color: #fff; }
+.ws-onboarding-card.join   .ws-ob-icon { background: linear-gradient(135deg, #27ae60, #1a7a43); color: #fff; }
+.ws-ob-title { font-size: 16px; font-weight: 700; color: #1a252f; margin-bottom: 8px; }
+.ws-ob-desc  { font-size: 13px; color: #6c757d; line-height: 1.6; margin-bottom: 22px; flex: 1; }
+.ws-ob-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; pointer-events: none; font-family: inherit; }
+.ws-onboarding-card.create .ws-ob-btn { background: linear-gradient(135deg, #3498db, #2471a3); color: #fff; }
+.ws-onboarding-card.join   .ws-ob-btn { background: linear-gradient(135deg, #27ae60, #1a7a43); color: #fff; }
+.ws-onboarding-card:hover .ws-ob-btn  { filter: brightness(1.08); }
+
+/* ============================================================
+   Premium Modal Hero Header
+   ============================================================ */
+.ws-hero {
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    padding: 24px 24px 22px;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.ws-hero::after {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+    pointer-events: none;
+}
+.ws-hero-row {
+    display: flex; align-items: center; gap: 14px;
+}
+.ws-hero-icon {
+    width: 48px; height: 48px; border-radius: 13px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 700; color: #fff; flex-shrink: 0;
+    background: rgba(255,255,255,0.13);
+    border: 1px solid rgba(255,255,255,0.22);
+    letter-spacing: -0.5px;
+}
+.ws-hero-text { flex: 1; min-width: 0; }
+.ws-hero-title { font-size: 17px; font-weight: 700; color: #fff; line-height: 1.2; margin-bottom: 3px; }
+.ws-hero-sub   { font-size: 12px; color: rgba(255,255,255,0.6); }
+.ws-hero-close {
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18);
+    color: rgba(255,255,255,0.75); width: 30px; height: 30px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 12px; transition: all 0.15s; flex-shrink: 0;
+}
+.ws-hero-close:hover { background: rgba(255,255,255,0.22); color: #fff; }
+
+.ws-hero-stats {
+    display: flex; align-items: center; gap: 20px;
+    margin-top: 16px; padding-top: 14px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+}
+.ws-hero-stat { display: flex; align-items: center; gap: 7px; }
+.ws-hero-stat i { font-size: 11px; color: rgba(255,255,255,0.45); }
+.ws-hero-stat-val { font-size: 15px; font-weight: 700; color: #fff; line-height: 1; }
+.ws-hero-stat-lbl { font-size: 11px; color: rgba(255,255,255,0.55); }
+
+/* ============================================================
+   Modal Body + Fields
+   ============================================================ */
+.ws-modal-body { padding: 20px 22px; background: #f7f9fc; }
+.ws-card { background: #fff; border: 1px solid #e4eaf2; border-radius: 10px; padding: 18px 18px 4px; margin-bottom: 12px; }
+.ws-card-title { font-size: 11px; font-weight: 700; color: #9aa3b2; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; }
+
+.ws-field { margin-bottom: 14px; }
+.ws-field label { display: block; font-size: 11px; font-weight: 700; color: #6c757d; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 5px; }
+.ws-field input,
+.ws-field textarea,
+.ws-field select {
+    width: 100%; padding: 9px 12px;
+    border: 1.5px solid #dce3ec; border-radius: 8px;
+    font-size: 14px; color: #2c3e50; background: #fafbfc;
+    font-family: inherit; transition: border-color 0.18s, box-shadow 0.18s, background 0.18s; outline: none;
+}
+.ws-field input:focus,
+.ws-field textarea:focus,
+.ws-field select:focus { border-color: #3498db; box-shadow: 0 0 0 3px rgba(52,152,219,0.12); background: #fff; }
+.ws-field textarea { resize: vertical; min-height: 72px; }
+
+/* Color swatches */
+.ws-swatch-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+.ws-swatch {
+    width: 30px; height: 30px; border-radius: 8px;
+    cursor: pointer; border: 2.5px solid transparent;
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+    position: relative;
+}
+.ws-swatch:hover { transform: scale(1.15); box-shadow: 0 3px 10px rgba(0,0,0,0.28); }
+.ws-swatch.active {
+    border-color: #1a252f;
+    transform: scale(1.1);
+    box-shadow: 0 0 0 3px rgba(26,37,47,0.18), 0 2px 8px rgba(0,0,0,0.2);
+}
+.ws-swatch.active::after {
+    content: '\f00c';
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    font-size: 10px;
+    color: #fff;
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+
+/* Visibility options */
+.ws-visibility-options { display: flex; gap: 10px; }
+.ws-vis-option {
+    flex: 1; border: 1.5px solid #dce3ec; border-radius: 10px;
+    padding: 13px; cursor: pointer; transition: all 0.18s;
+    display: flex; align-items: center; gap: 11px;
+    background: #fafbfc; font: inherit; text-align: left;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.ws-vis-option:hover  { border-color: #3498db; background: #f4f9fe; box-shadow: 0 2px 10px rgba(52,152,219,0.12); }
+.ws-vis-option.active { border-color: #3498db; background: rgba(52,152,219,0.05); box-shadow: 0 0 0 3px rgba(52,152,219,0.1); }
+.ws-vis-icon {
+    width: 38px; height: 38px; border-radius: 9px;
+    background: #eef1f5; display: flex; align-items: center; justify-content: center;
+    font-size: 15px; color: #6c757d; flex-shrink: 0;
+    transition: background 0.18s, color 0.18s;
+}
+.ws-vis-option.active .ws-vis-icon { background: rgba(52,152,219,0.14); color: #3498db; }
+.ws-vis-info  { flex: 1; }
+.ws-vis-title { font-size: 13px; font-weight: 600; color: #2c3e50; }
+.ws-vis-desc  { font-size: 11px; color: #9aa3b2; margin-top: 2px; }
+
+/* Submit button */
+.ws-submit-btn {
+    width: 100%; padding: 11px 20px; border-radius: 9px; border: none;
+    background: linear-gradient(135deg, #2a5298, #3498db);
+    color: #fff; font-size: 14px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    font-family: inherit; box-shadow: 0 3px 12px rgba(52,152,219,0.35);
+    transition: all 0.18s;
+}
+.ws-submit-btn:hover:not(:disabled) { box-shadow: 0 5px 18px rgba(52,152,219,0.45); transform: translateY(-1px); }
+.ws-submit-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Modal footer */
+.ws-modal-footer {
+    padding: 14px 22px; border-top: 1px solid #e4eaf2;
+    display: flex; justify-content: flex-end; gap: 8px;
+    background: #fff;
+}
+
+/* ============================================================
+   Manage Tabs (sticky)
+   ============================================================ */
+.ws-manage-tabs {
+    display: flex; border-bottom: 1px solid #e4eaf2;
+    padding: 0 22px; background: #fff;
+    position: sticky; top: 0; z-index: 5;
+}
+.ws-manage-tab {
+    padding: 12px 14px; font-size: 13px; font-weight: 500; color: #6c757d;
+    cursor: pointer; border: none; background: none;
+    border-bottom: 2px solid transparent; transition: color 0.15s;
+    font-family: inherit; display: flex; align-items: center; gap: 6px;
+    margin-bottom: -1px;
+}
+.ws-manage-tab:hover  { color: #2c3e50; }
+.ws-manage-tab.active { color: #2a5298; border-bottom-color: #2a5298; font-weight: 600; }
+.ws-manage-badge {
+    min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+    background: #e8ecf2; color: #6c757d;
+    font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+}
+.ws-manage-tab.active .ws-manage-badge { background: rgba(42,82,152,0.12); color: #2a5298; }
+
+/* ============================================================
+   Members
+   ============================================================ */
+.ws-members-list { display: flex; flex-direction: column; margin-bottom: 12px; }
+.ws-member-row {
+    display: flex; align-items: center; gap: 11px;
+    padding: 10px 12px; border-radius: 9px; transition: background 0.12s; cursor: default;
+}
+.ws-member-row:hover { background: #f4f7fb; }
+.ws-member-row + .ws-member-row { border-top: 1px solid #f0f3f8; }
+.ws-member-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0;
+    box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px rgba(52,152,219,0.2);
+}
+.ws-member-info  { flex: 1; min-width: 0; }
+.ws-member-name  { font-size: 13px; font-weight: 600; color: #2c3e50; }
+.ws-member-email { font-size: 11px; color: #9aa3b2; margin-top: 1px; }
+.ws-member-role-select {
+    padding: 5px 8px; border: 1.5px solid #dce3ec; border-radius: 6px;
+    font-size: 12px; color: #495057; background: #fafbfc; cursor: pointer; font-family: inherit;
+}
+.ws-member-remove {
+    width: 28px; height: 28px; border: none; background: none; color: #c5cdd8;
+    cursor: pointer; border-radius: 6px; display: flex; align-items: center;
+    justify-content: center; transition: all 0.15s; font-size: 12px;
+}
+.ws-member-remove:hover { background: #fdecea; color: #d05a66; }
+
+.ws-add-member-form {
+    display: flex; gap: 8px; padding: 12px;
+    background: #f0f4fa; border-radius: 9px;
+    border: 1.5px dashed #c4d0e3; margin-top: 6px;
+}
+.ws-add-member-form input {
+    flex: 1; padding: 8px 10px; border: 1.5px solid #dce3ec;
+    border-radius: 7px; font-size: 13px; font-family: inherit; outline: none; color: #2c3e50; background: #fff;
+}
+.ws-add-member-form input:focus { border-color: #3498db; box-shadow: 0 0 0 3px rgba(52,152,219,0.1); }
+.ws-add-member-form select {
+    padding: 8px 9px; border: 1.5px solid #dce3ec; border-radius: 7px;
+    font-size: 13px; font-family: inherit; background: #fff; color: #495057;
+}
+
+/* ============================================================
+   Requests
+   ============================================================ */
+.ws-request-list { display: flex; flex-direction: column; gap: 8px; }
+.ws-request-item {
+    padding: 13px 14px; border: 1px solid #e4eaf2;
+    border-left: 3px solid #f39c12; border-radius: 10px;
+    background: #fff; display: flex; gap: 11px; align-items: flex-start;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04); transition: box-shadow 0.15s;
+}
+.ws-request-item:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.08); }
+.ws-request-info  { flex: 1; }
+.ws-request-name  { font-size: 13px; font-weight: 600; color: #2c3e50; }
+.ws-request-email { font-size: 11px; color: #9aa3b2; margin-top: 2px; }
+.ws-request-msg   { font-size: 12px; color: #6c757d; margin-top: 6px; font-style: italic; line-height: 1.5; }
+.ws-request-actions { display: flex; gap: 6px; flex-shrink: 0; padding-top: 2px; }
+.ws-req-btn { padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; font-family: inherit; transition: filter 0.15s; }
+.ws-req-btn.approve { background: #d4edda; color: #155724; }
+.ws-req-btn.approve:hover { filter: brightness(0.92); }
+.ws-req-btn.decline { background: #f8d7da; color: #721c24; }
+.ws-req-btn.decline:hover { filter: brightness(0.92); }
+
+/* Empty state */
+.ws-empty { display: flex; flex-direction: column; align-items: center; padding: 36px 0; text-align: center; }
+.ws-empty-icon {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: linear-gradient(135deg, #e8ecf2, #d4dce8);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; color: #9aa3b2; margin-bottom: 14px;
+}
+.ws-empty-title { font-size: 14px; font-weight: 600; color: #495057; margin-bottom: 5px; }
+.ws-empty-desc  { font-size: 12px; color: #9aa3b2; max-width: 220px; line-height: 1.5; }
+
+/* ============================================================
+   Browse
+   ============================================================ */
+.ws-browse-search {
+    display: flex; align-items: center; gap: 9px;
+    padding: 10px 13px; border: 1.5px solid #dce3ec; border-radius: 9px;
+    margin-bottom: 14px; background: #fff; transition: border-color 0.18s, box-shadow 0.18s;
+}
+.ws-browse-search:focus-within { border-color: #3498db; box-shadow: 0 0 0 3px rgba(52,152,219,0.1); }
+.ws-browse-search i { color: #9aa3b2; }
+.ws-browse-search input { border: none; outline: none; font-size: 14px; flex: 1; font-family: inherit; color: #2c3e50; background: transparent; }
+
+.ws-browse-list { display: flex; flex-direction: column; gap: 8px; }
+.ws-browse-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 13px 14px; border: 1px solid #e4eaf2; border-radius: 12px;
+    background: #fff; transition: all 0.18s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.ws-browse-item:hover { border-color: #3498db; box-shadow: 0 4px 16px rgba(52,152,219,0.13); transform: translateY(-1px); }
+.ws-browse-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 700; color: #fff; flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+}
+.ws-browse-info  { flex: 1; min-width: 0; }
+.ws-browse-name  { font-size: 14px; font-weight: 600; color: #2c3e50; }
+.ws-browse-desc  { font-size: 12px; color: #6c757d; margin-top: 3px; }
+.ws-browse-meta  { font-size: 11px; color: #9aa3b2; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+
+.ws-join-btn {
+    padding: 7px 15px; border-radius: 8px; font-size: 12px; font-weight: 600;
+    border: 1.5px solid #3498db; color: #3498db; background: #fff;
+    cursor: pointer; transition: all 0.18s; white-space: nowrap;
+    font-family: inherit; flex-shrink: 0;
+    box-shadow: 0 1px 4px rgba(52,152,219,0.15);
+}
+.ws-join-btn:hover { background: linear-gradient(135deg, #2a5298, #3498db); border-color: transparent; color: #fff; box-shadow: 0 3px 12px rgba(52,152,219,0.35); }
+.ws-join-btn.requested { border-color: #c5cdd8; color: #9aa3b2; cursor: default; box-shadow: none; }
+.ws-join-btn.requested:hover { background: #fff; color: #9aa3b2; border-color: #c5cdd8; box-shadow: none; transform: none; }
+
+/* ============================================================
+   Danger zone
+   ============================================================ */
+.ws-danger-zone { margin-top: 20px; padding: 16px; border: 1px solid #f5c6cb; border-radius: 9px; background: #fff9f9; }
+.ws-danger-title { font-size: 11px; font-weight: 700; color: #c0392b; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 10px; }
+.ws-btn-danger { background: #fff; border: 1.5px solid #e74c3c; color: #e74c3c; border-radius: 7px; padding: 7px 14px; font-size: 13px; font-family: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s; }
+.ws-btn-danger:hover { background: #fdecea; }

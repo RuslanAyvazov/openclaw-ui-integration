@@ -1,0 +1,436 @@
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.active {
+    display: flex;
+}
+
+/* Заблокированная кнопка обязана ВЫГЛЯДЕТЬ заблокированной — иначе клики
+   молча глохнут и кажется, что «ничего не происходит». */
+.btn:disabled,
+button:disabled.btn-primary,
+button:disabled.btn-secondary {
+    opacity: 0.45;
+    cursor: not-allowed;
+    box-shadow: none;
+    filter: grayscale(0.35);
+}
+
+.modal-content {
+    background-color: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    overflow: hidden;
+}
+
+.modal-header {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #6c757d;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-tab-nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 18px;
+}
+
+.passport-modal-body .modal-tab-nav {
+    position: sticky;
+    top: 0;
+    z-index: 15;
+    background: #fff;
+    padding: 2px 0 10px;
+    box-shadow: 0 2px 0 rgba(255,255,255,0.95);
+}
+
+.modal-tab-btn {
+    border: 1px solid #d7dee6;
+    background: #f3f6fa;
+    color: #46556a;
+    border-radius: 6px;
+    padding: 10px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-tab-btn:hover {
+    border-color: #96b8dd;
+    color: #2c3e50;
+}
+
+.modal-tab-btn.active {
+    background: #1e88e5;
+    border-color: #1e88e5;
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(30, 136, 229, 0.25);
+}
+
+.modal-tab-pane {
+    display: none;
+}
+
+.modal-tab-pane.active {
+    display: block;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #495057;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.form-control:focus {
+    border-color: #1e88e5;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.2);
+}
+
+.modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #dee2e6;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.modal-danger-zone {
+    padding: 12px 20px 18px;
+    border-top: 1px dashed #f0c5cb;
+    background-color: #fff8f8;
+    display: flex;
+    justify-content: flex-start;
+}
+
+.btn-danger-soft {
+    background-color: #f7dfe2;
+    color: #a33b47;
+}
+
+.btn-danger-soft:hover {
+    background-color: #f3cfd4;
+}
+
+.btn {
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: background-color 0.2s;
+}
+
+.btn-primary {
+    background-color: #1e88e5;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #1976d2;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+.notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #333;
+    color: white;
+    padding: 15px 20px;
+    border-radius: 5px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    z-index: 1000;
+    font-weight: 500;
+    transition: transform 0.3s, opacity 0.3s;
+    transform: translateY(100px);
+    opacity: 0;
+}
+
+.notification.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.icon-kafka {
+    color: #039be5;
+}
+
+.icon-hbase {
+    color: #8c8c8c;
+}
+
+.icon-spark {
+    color: #e25a1c;
+}
+
+.icon-parquet {
+    color: #50c878;
+}
+
+.icon-iceberg {
+    color: #00b4d8;
+}
+
+.icon-jenkins {
+    color: #d24939;
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        position: absolute;
+        height: calc(100vh - 60px);
+        z-index: 10;
+        transform: translateX(-100%);
+    }
+
+    .sidebar.active {
+        transform: translateX(0);
+    }
+
+    .tiles-container {
+        grid-template-columns: 1fr;
+    }
+
+    .ribbon {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .view-selector {
+        position: absolute;
+        left: 0;
+        height: calc(100vh - 60px);
+        z-index: 10;
+        transform: translateX(-100%);
+    }
+
+    .view-selector.active {
+        transform: translateX(0);
+    }
+
+    .canvas-tab {
+        min-width: 100px;
+        max-width: 140px;
+    }
+}
+/* Properties panel header close button */
+.properties-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.properties-header-title {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.properties-close-btn {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.7);
+    cursor: pointer;
+    font-size: 18px;
+    padding: 2px 6px;
+    line-height: 1;
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-left: 8px;
+    transition: all 0.15s;
+}
+
+.properties-close-btn:hover {
+    background: rgba(255,255,255,0.18);
+    color: white;
+}
+
+/* Properties panel footer */
+.properties-footer {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid rgba(255,255,255,0.15);
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    flex-shrink: 0;
+}
+
+.properties-footer-btn {
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11.5px;
+    font-weight: 500;
+    transition: all 0.18s;
+    border: 1px solid;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.properties-footer-btn.save {
+    background: #2e7d32;
+    border-color: #1b5e20;
+    color: white;
+}
+
+.properties-footer-btn.save:hover {
+    background: #388e3c;
+}
+
+.properties-footer-btn.discard {
+    background: transparent;
+    border-color: rgba(255,255,255,0.4);
+    color: rgba(255,255,255,0.85);
+}
+
+.properties-footer-btn.discard:hover {
+    background: rgba(255,255,255,0.12);
+    color: white;
+}
+
+/* Sidebar confirmation modal */
+.sidebar-confirm-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(10, 20, 50, 0.55);
+    z-index: 1100;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar-confirm-overlay.active {
+    display: flex;
+}
+
+.sidebar-confirm-dialog {
+    background: white;
+    border-radius: 12px;
+    padding: 28px 32px 24px;
+    max-width: 520px;
+    width: 90%;
+    box-shadow: 0 8px 40px rgba(10, 20, 80, 0.22);
+}
+
+.sidebar-confirm-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e3c72;
+    margin-bottom: 10px;
+}
+
+.sidebar-confirm-text {
+    font-size: 14px;
+    color: #4a5568;
+    margin: 0 0 22px;
+    line-height: 1.5;
+}
+
+.sidebar-confirm-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.sidebar-confirm-btn {
+    padding: 9px 14px;
+    border-radius: 7px;
+    border: 1px solid;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+    transition: all 0.18s;
+    white-space: nowrap;
+}
+
+.sidebar-confirm-btn.save {
+    background: #2e7d32;
+    border-color: #1b5e20;
+    color: white;
+}
+
+.sidebar-confirm-btn.save:hover { background: #388e3c; }
+
+.sidebar-confirm-btn.discard {
+    background: #c62828;
+    border-color: #b71c1c;
+    color: white;
+}
+
+.sidebar-confirm-btn.discard:hover { background: #d32f2f; }
+
+.sidebar-confirm-btn.cancel {
+    background: white;
+    border-color: #cdd8e8;
+    color: #4a5568;
+}
+
+.sidebar-confirm-btn.cancel:hover {
+    background: #f5f7fb;
+}
+

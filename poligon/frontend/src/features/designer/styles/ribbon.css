@@ -1,0 +1,582 @@
+.ribbon-tabs {
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+    border-bottom: none;
+    padding: 0 16px;
+}
+
+.ribbon-view-toggle {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    padding: 4px 10px;
+    background: none;
+    border: none;
+    flex-shrink: 0;
+}
+
+.toggle-switch {
+    display: flex;
+    align-items: center;
+}
+
+.toggle-track {
+    display: inline-block;
+    width: 48px;
+    height: 26px;
+    background: rgba(255,255,255,0.25);
+    border-radius: 13px;
+    position: relative;
+    transition: background 0.3s ease;
+}
+
+.ribbon-view-toggle input:checked + .toggle-track {
+    background: rgba(255,255,255,0.9);
+}
+
+.toggle-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.35);
+    transition: left 0.3s ease, background 0.3s ease;
+}
+
+.ribbon-view-toggle input:checked + .toggle-track .toggle-thumb {
+    left: 25px;
+    background: #4361ee;
+}
+
+.ribbon-tab {
+    padding: 10px 18px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.7);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+    letter-spacing: 0.3px;
+}
+
+.ribbon-tab:hover {
+    background-color: rgba(255,255,255,0.12);
+    color: white;
+}
+
+.ribbon-tab.active {
+    color: white;
+    border-bottom: 2px solid #64b5f6;
+    background-color: rgba(255,255,255,0.1);
+}
+
+.ribbon {
+    background: linear-gradient(180deg, #ffffff 0%, #f5f7ff 100%);
+    border-bottom: 1px solid #dde3f8;
+    padding: 10px 20px;
+    display: none;
+    flex-wrap: nowrap;
+    gap: 0;
+    box-shadow: 0 3px 14px rgba(26,35,126,0.09);
+    z-index: 50;
+    align-items: stretch;
+    height: 125px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-shrink: 0;
+}
+
+.ribbon.active {
+    display: flex;
+}
+
+.ribbon-section {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    min-width: 110px;
+    padding: 6px 16px 6px;
+    border-right: 1px solid #dde3f8;
+    transition: min-width 0.28s ease, padding 0.28s ease;
+}
+
+.ribbon-section:first-child {
+    padding-left: 4px;
+}
+
+.ribbon-section:last-child {
+    border-right: none;
+}
+
+.ribbon-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: #8c9fd6;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: center;
+    white-space: normal;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.ribbon-items {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 5px;
+    align-items: flex-start;
+}
+
+.ribbon-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 11px;
+    background: white;
+    border: 1px solid #e4eaff;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 70px;
+    user-select: none;
+    box-shadow: 0 1px 3px rgba(26,35,126,0.05);
+    position: relative;
+}
+
+/* Drag-and-drop items: синяя полоска снизу + иконка grip в углу */
+.ribbon-item:not(.button) {
+    border-bottom: 2.5px solid rgba(92, 107, 192, 0.45);
+    cursor: grab;
+}
+
+.ribbon-item:not(.button)::after {
+    content: '\f58e'; /* fa-grip-vertical */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    font-size: 7px;
+    color: rgba(92, 107, 192, 0.5);
+    position: absolute;
+    top: 3px;
+    right: 4px;
+    line-height: 1;
+    pointer-events: none;
+}
+
+/* Click-only items: серая полоска снизу + иконка курсора в углу */
+.ribbon-item.button {
+    border-bottom: 2.5px solid rgba(180, 180, 200, 0.35);
+}
+
+.ribbon-item.button::after {
+    content: '\f245'; /* fa-mouse-pointer */
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    font-size: 7px;
+    color: rgba(160, 160, 180, 0.6);
+    position: absolute;
+    top: 3px;
+    right: 4px;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.ribbon-item:hover {
+    background: linear-gradient(160deg, #eef1ff 0%, #f3f6ff 100%);
+    border-color: #5c6bc0;
+    box-shadow: 0 3px 10px rgba(92,107,192,0.22);
+}
+
+.ribbon-item.active {
+    background: linear-gradient(135deg, #3949ab 0%, #5c6bc0 100%);
+    border-color: #3949ab;
+    color: white;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.18);
+}
+
+.ribbon-item.active i {
+    color: white !important;
+}
+
+.ribbon-item.active span {
+    color: rgba(255,255,255,0.95);
+}
+
+.ribbon-item i {
+    font-size: 20px;
+    color: #5c6bc0;
+    margin-bottom: 5px;
+    transition: color 0.18s;
+}
+
+.ribbon-item[data-type="engine"] i { color: #e53935; }
+.ribbon-item[data-type="format"] i { color: #00897b; }
+.ribbon-item[data-type="recovery"] i { color: #f57c00; }
+.ribbon-item[data-type="data"] i { color: #8e24aa; }
+.ribbon-item[data-type="query"] i { color: #039be5; }
+.ribbon-item[data-type="insert"] i { color: #43a047; }
+/* Coalesce находится в группе верификации — цвет как у query */
+.ribbon-item[data-type="insert"][data-subtype="coalesce"] i { color: #039be5; }
+/* Kafka2HDFS — тот же цвет что у Transform (query) */
+.ribbon-item[data-subtype="kafka2hdfs"] i { color: #039be5; }
+.ribbon-item[data-type="share"] i { color: #e53935; }
+.ribbon-item[data-type="ddl"] i { color: #e65100; }
+.ribbon-item[data-type="help"] i { color: #00897b; }
+.ribbon-item[data-type="support"] i { color: #039be5; }
+
+.ribbon-item.active i { color: white !important; }
+
+.ribbon-item img {
+    width: 24px;
+    height: 24px;
+    margin-bottom: 5px;
+    object-fit: contain;
+}
+
+.ribbon-item span {
+    font-size: 10.5px;
+    text-align: center;
+    color: #3d4a7a;
+    line-height: 1.2;
+    font-weight: 500;
+}
+
+.ribbon-item.dragging {
+    opacity: 0.4;
+    transform: scale(0.92);
+    filter: grayscale(0.2);
+}
+
+.ribbon-drag-ghost {
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.92;
+    transform: scale(1.1) rotate(-3deg);
+    box-shadow: 0 16px 48px rgba(26, 35, 126, 0.32), 0 6px 18px rgba(92, 107, 192, 0.24) !important;
+    border: 2px solid #5c6bc0 !important;
+    border-radius: 10px;
+    background: linear-gradient(160deg, #eef1ff 0%, #f3f6ff 100%) !important;
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+    cursor: grabbing;
+}
+
+.ribbon-drag-ghost i {
+    filter: drop-shadow(0 2px 4px rgba(92, 107, 192, 0.4));
+}
+
+.designer-grid.ribbon-drag-over {
+    border-color: #5c6bc0 !important;
+    box-shadow:
+        0 0 0 3px rgba(92, 107, 192, 0.22),
+        inset 0 0 60px rgba(92, 107, 192, 0.07),
+        0 8px 24px rgba(19, 44, 75, 0.06) !important;
+    background-image:
+        radial-gradient(circle at 1px 1px, rgba(92, 107, 192, 0.28) 1px, transparent 0),
+        linear-gradient(120deg, rgba(238, 241, 255, 0.6), rgba(243, 246, 255, 0.6)) !important;
+    background-size: 22px 22px, auto !important;
+}
+
+.ribbon-drop-placeholder {
+    position: absolute;
+    width: 160px;
+    height: 100px;
+    border: 2px dashed #5c6bc0;
+    border-radius: 12px;
+    background: rgba(92, 107, 192, 0.07);
+    pointer-events: none;
+    z-index: 5;
+    transition: left 0.05s ease, top 0.05s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ribbon-drop-placeholder::after {
+    content: '';
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(92, 107, 192, 0.15);
+    border: 2px solid rgba(92, 107, 192, 0.4);
+}
+
+@keyframes canvasElementSpawn {
+    0% {
+        opacity: 0;
+        transform: scale(0.65) translateY(10px);
+    }
+    65% {
+        transform: scale(1.05) translateY(-2px);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.canvas-element.spawning {
+    animation: canvasElementSpawn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.ribbon-item.button {
+    cursor: pointer;
+}
+
+.ribbon-item.disabled {
+    pointer-events: none;
+    opacity: 0.38;
+    filter: grayscale(0.4);
+}
+
+/* Wide mode: тонкий стилизованный скроллбар */
+.ribbon {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(92,107,192,0.4) transparent;
+}
+.ribbon::-webkit-scrollbar { height: 4px; }
+.ribbon::-webkit-scrollbar-track { background: transparent; }
+.ribbon::-webkit-scrollbar-thumb {
+    background: rgba(92,107,192,0.45);
+    border-radius: 2px;
+}
+
+/* DDL gating: секции справа от DDL заблокированы */
+.ribbon-section.ddl-locked {
+    opacity: 0.32;
+    pointer-events: none;
+    filter: grayscale(0.4);
+    transition: opacity 0.25s, filter 0.25s;
+}
+
+/* Compact mode: секция схлопывается до размера trigger-кнопки */
+.ribbon.compact-mode .ribbon-section {
+    position: relative;
+}
+
+.ribbon.compact-mode .ribbon-section.has-compact-trigger {
+    min-width: 0;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+/* Compact mode: скрываем items (display:none чтобы не занимали ширину) */
+.ribbon.compact-mode .ribbon-section.has-compact-trigger .ribbon-items {
+    display: none;
+}
+
+/* Trigger-элемент для схлопнутых групп (≥ 3 items) */
+.ribbon-group-trigger {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 12px 4px;
+    background: white;
+    border: 1px solid #e4eaff;
+    border-bottom: 2.5px solid rgba(92,107,192,0.4);
+    border-radius: 8px;
+    cursor: pointer;
+    min-width: 66px;
+    user-select: none;
+    box-shadow: 0 1px 3px rgba(26,35,126,0.05);
+    transition: all 0.18s cubic-bezier(0.4,0,0.2,1);
+    position: relative;
+    animation: triggerFadeIn 0.25s ease;
+}
+
+@keyframes triggerFadeIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+.ribbon-group-trigger:hover,
+.ribbon-group-trigger.trigger-open {
+    background: linear-gradient(160deg, #eef1ff 0%, #f3f6ff 100%);
+    border-color: #5c6bc0;
+    border-bottom-color: #5c6bc0;
+    box-shadow: 0 3px 10px rgba(92,107,192,0.22);
+}
+
+.ribbon-trigger-icon {
+    font-size: 17px;
+    color: #5c6bc0;
+    margin-bottom: 2px;
+}
+
+.ribbon-trigger-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: #3d4a7a;
+    max-width: 72px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.2;
+}
+
+.ribbon-trigger-arrow {
+    font-size: 8px;
+    color: #8c9fd6;
+    margin-top: 2px;
+}
+
+/* Dropdown overlay: вертикальный список */
+.ribbon-compact-dropdown {
+    position: fixed;
+    background: white;
+    border: 1px solid #dde3f8;
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(26,35,126,0.15), 0 2px 8px rgba(26,35,126,0.07);
+    z-index: 9999;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 200px;
+    animation: dropdownFadeIn 0.14s ease;
+}
+
+@keyframes dropdownFadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Items в dropdown: горизонтальный макет (иконка + текст) */
+.ribbon-compact-dropdown .ribbon-item {
+    flex-direction: row;
+    min-width: unset;
+    width: 100%;
+    justify-content: flex-start;
+    gap: 10px;
+    padding: 8px 12px;
+    border-bottom: none;
+    border-radius: 6px;
+}
+
+.ribbon-compact-dropdown .ribbon-item i {
+    margin-bottom: 0;
+    font-size: 15px;
+    width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.ribbon-compact-dropdown .ribbon-item span {
+    font-size: 12px;
+    text-align: left;
+    white-space: nowrap;
+}
+
+/* Индикаторы drag/click остаются в dropdown */
+.ribbon-compact-dropdown .ribbon-item:not(.button)::after,
+.ribbon-compact-dropdown .ribbon-item.button::after {
+    top: 4px;
+    right: 5px;
+}
+
+.canvas-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.canvas-area {
+    flex: 1;
+    background-color: #f0f2f5;
+    overflow: auto;
+    padding: 20px;
+    position: relative;
+}
+
+.designer-main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+.designer-grid {
+    position: relative;
+    width: 100%;
+    min-height: 800px;
+    background-color: #fbfcff;
+    border: 1px solid #e3e8f1;
+    border-radius: 16px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 8px 24px rgba(19, 44, 75, 0.06);
+    background-image:
+        radial-gradient(circle at 1px 1px, rgba(132, 153, 182, 0.18) 1px, transparent 0),
+        linear-gradient(120deg, rgba(255,255,255,0.7), rgba(246,249,255,0.7));
+    background-size: 22px 22px, auto;
+}
+
+.designer-grid::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.65);
+    border-radius: 16px;
+}
+
+.designer-grid.has-invalid-nodes {
+    border-color: #f2c7cd;
+    box-shadow: inset 0 0 0 1px rgba(224, 95, 110, 0.12), 0 8px 26px rgba(120, 32, 46, 0.08);
+}
+
+.dag-link-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: auto;
+    z-index: 5;
+}
+
+.dag-link {
+    fill: none;
+    stroke: #6384ba;
+    stroke-width: 2;
+    opacity: 0.9;
+    marker-end: url(#dagArrowHead);
+    transition: stroke 0.18s ease, stroke-width 0.18s ease, opacity 0.18s ease, filter 0.18s ease;
+    cursor: pointer;
+    pointer-events: stroke;
+}
+
+.dag-link.preview {
+    stroke-dasharray: 6 4;
+    stroke-linecap: round;
+    opacity: 0.78;
+    stroke: #4d72ab;
+    filter: drop-shadow(0 1px 2px rgba(56, 87, 132, 0.22));
+    animation: dagPreviewPulse 1.2s ease-in-out infinite;
+}
+
+.dag-link.is-hovered,
+.dag-link:hover {
+    stroke: #2f5ea8;
+    stroke-width: 2.8;
+    opacity: 1;
+    filter: drop-shadow(0 0 4px rgba(44, 95, 168, 0.25));
+}
+
+.dag-link.is-selected {
+    stroke: #204d93;
+    stroke-width: 3.1;
+    opacity: 1;
+}
+
+@keyframes dagPreviewPulse {
+    0%, 100% { stroke-dashoffset: 0; }
+    50% { stroke-dashoffset: -14; }
+}
+

@@ -1,0 +1,65 @@
+{
+  "appConfig": {},
+  "treadConfigs": [
+    {
+      "name": "stg",
+      "stages": [
+        {
+          "config": {"filegsql": ${rendered_template.stg.template.sql}},
+          "enabled": true,
+          "name": "PreStage"
+        }
+      ]
+    },
+    {
+      "name": "historicity",
+      "stages": [
+        {
+          "config": {"filegsql": ${rendered_template.historicity.template.sql}},
+          "enabled": true,
+          "name": "PreStage"
+        }
+      ]
+    },
+    {
+      "name": "dqc_pa_dev",
+      "stages": [
+        {
+          "config": {
+            "filedqc": ${rendered_template.dqc.template.json},
+            "sparkEngineParams": {},
+            "useKKD": false
+          },
+          "enabled": true,
+          "name": "dataQualityCheck"
+        }
+      ]
+    },
+    {
+      "name": "move2pa",
+      "stages": [
+        {
+          "config": {"filegsql": ${rendered_template.move_table.template.sql}},
+          "enabled": true,
+          "name": "PreStage"
+        }
+      ]
+    },
+    {
+      "name": "coalesce",
+      "stages": [
+        {
+          "config": {"filegsql": ${rendered_template.coalesce.template.sql}},
+          "enabled": true,
+          "name": "PreStage"
+        }
+      ]
+    }
+  ],
+  "treadRelations": [
+    {"from": "stg", "to": "historicity"},
+    {"from": "historicity", "to": "dqc_pa_dev"},
+    {"from": "dqc_pa_dev", "to": "move2pa"},
+    {"from": "move2pa", "to": "coalesce"}
+  ]
+}

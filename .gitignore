@@ -1,0 +1,13 @@
+.env
+*.log
+node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+frontend/dist/
+backend/data/
+backend/staticfiles/
+repositories/
+openclaw.local.json
+.DS_Store
+Thumbs.db

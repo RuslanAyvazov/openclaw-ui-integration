@@ -1,0 +1,211 @@
+.tiles-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 10px;
+}
+
+.tile {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    padding: 20px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid #e0e0e0;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.tile:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+}
+
+.tile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+
+.tile-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.tile-status {
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.tile-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tile-menu-trigger {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    background-color: transparent;
+    color: #7f8c8d;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.tile-menu-trigger:hover {
+    background-color: #f1f3f5;
+    color: #2c3e50;
+}
+
+.tile-context-menu {
+    position: absolute;
+    top: 56px;
+    right: 20px;
+    min-width: 170px;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+    padding: 6px;
+    display: none;
+    z-index: 10;
+}
+
+.tile-context-menu.open {
+    display: block;
+}
+
+.tile-context-item {
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: #2c3e50;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    text-align: left;
+}
+
+.tile-context-item i {
+    width: 16px;
+    text-align: center;
+}
+
+.tile-context-item:hover {
+    background-color: #f2f4f6;
+}
+
+.tile-context-item.delete {
+    color: #d05a66;
+}
+
+.tile-context-item.delete:hover {
+    background-color: #fbecee;
+    color: #bb3847;
+}
+
+.status-active {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-draft {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.tile-content {
+    color: #7f8c8d;
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 15px;
+}
+
+.tile-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    color: #95a5a6;
+}
+
+.tile-meta-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.tile-meta-label {
+    color: #6c7a89;
+    font-weight: 600;
+}
+
+.tile-meta-value {
+    color: #495057;
+    text-align: right;
+}
+
+.tile-add {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f9fa;
+    border: 2px dashed #ced4da;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-height: 200px;
+    overflow: visible;
+}
+
+.tile-add:hover {
+    background-color: #e9ecef;
+    border-color: #1e88e5;
+}
+
+.add-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: #1e88e5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+}
+
+.add-icon i {
+    font-size: 24px;
+    color: white;
+}
+
+.add-text {
+    font-size: 16px;
+    color: #495057;
+    font-weight: 600;
+}
+
+.tile-add-context-menu {
+    top: auto;
+    right: auto;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    min-width: 230px;
+    z-index: 20;
+}
+

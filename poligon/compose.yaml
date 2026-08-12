@@ -1,0 +1,130 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-b2csql}
+      POSTGRES_USER: ${POSTGRES_USER:-b2csql}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-b2csql_dev}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    networks:
+      - data
+
+  openclaw:
+    build:
+      context: .
+      dockerfile: openclaw/Dockerfile
+      args:
+        OPENCLAW_VERSION: ${OPENCLAW_VERSION:-2026.7.1-2}
+    environment:
+      OPENCLAW_HOME: /home/node/.openclaw
+      OPENCLAW_STATE_DIR: /home/node/.openclaw
+      OPENCLAW_CONFIG_PATH: /home/node/.openclaw/openclaw.json
+      OPENCLAW_WORKSPACE_DIR: /home/node/.openclaw/workspace
+      OPENCLAW_CONTROL_TOKEN_FILE: /run/openclaw-control/token
+      OPENCLAW_CONTROL_HOST: 0.0.0.0
+      OPENCLAW_CONTROL_PORT: 18890
+      OPENCLAW_GATEWAY_PORT: 18789
+      OPENCLAW_PROVIDER: ${OPENCLAW_PROVIDER:-custom-routerai-ru}
+      OPENCLAW_PROVIDER_NAME: ${OPENCLAW_PROVIDER_NAME:-RouterAI}
+      OPENCLAW_PROVIDER_BASE_URL: ${OPENCLAW_PROVIDER_BASE_URL:-https://routerai.ru/api/v1}
+      OPENCLAW_DEFAULT_MODEL: ${OPENCLAW_DEFAULT_MODEL:-custom-routerai-ru/deepseek/deepseek-v4-pro}
+      OPENCLAW_MODEL_NAME: ${OPENCLAW_MODEL_NAME:-DeepSeek V4 Pro}
+      OPENCLAW_DISABLE_BONJOUR: "1"
+      TZ: ${TZ:-Europe/Moscow}
+    volumes:
+      - openclaw_data:/home/node/.openclaw
+      - openclaw_auth_secrets:/home/node/.config/openclaw
+      - openclaw_control:/run/openclaw-control
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:18890/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - openclaw_control
+      - openclaw_egress
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-b2csql}
+      POSTGRES_USER: ${POSTGRES_USER:-b2csql}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-b2csql_dev}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-local-dev-secret-change-me}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-false}
+      DJANGO_ALLOWED_HOSTS: "*"
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      REPOSITORIES_ROOT: /data/repositories
+      B2C_SKILL_ROOT: /app/openclaw/skills/build-b2c-mart
+      B2C_UI_TMPFS_DIR: /dev/shm
+      OPENCLAW_CONTROL_URL: http://openclaw:18890
+      OPENCLAW_CONTROL_TOKEN_FILE: /run/openclaw-control/token
+      OPENCLAW_DEFAULT_MODEL: ${OPENCLAW_DEFAULT_MODEL:-custom-routerai-ru/deepseek/deepseek-v4-pro}
+    volumes:
+      - repository_data:/data/repositories
+      - openclaw_control:/run/openclaw-control:ro
+      - ./backend/data:/legacy:ro
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+    shm_size: 256m
+    depends_on:
+      postgres:
+        condition: service_healthy
+      openclaw:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    networks:
+      - data
+      - web
+      - openclaw_control
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "${UI_PORT:-8088}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - web
+
+volumes:
+  postgres_data:
+  repository_data:
+  openclaw_data:
+  openclaw_auth_secrets:
+  openclaw_control:
+
+networks:
+  data:
+    internal: true
+  web:
+  openclaw_control:
+    internal: true
+  openclaw_egress:
