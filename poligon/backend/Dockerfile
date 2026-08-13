@@ -19,6 +19,7 @@ COPY openclaw/skills/build-b2c-mart /app/openclaw/skills/build-b2c-mart
 RUN chmod +x /app/backend/entrypoint.sh \
     /app/openclaw/skills/build-b2c-mart/scripts/run.sh \
     /app/openclaw/skills/build-b2c-mart/scripts/run_from_files.sh \
+    /app/openclaw/skills/build-b2c-mart/scripts/run_update_from_files.sh \
     /app/openclaw/skills/build-b2c-mart/scripts/setup.sh
 
 WORKDIR /app/backend

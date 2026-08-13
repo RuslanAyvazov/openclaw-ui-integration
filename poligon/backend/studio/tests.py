@@ -6,6 +6,7 @@ from unittest.mock import patch
 from django.test import TestCase, override_settings
 
 from studio.models import Datamart, User, Workspace, WorkspaceMembership
+from studio.services.repositories import save_repository, serialize_repository
 
 
 class RegistrationTests(TestCase):
@@ -136,3 +137,199 @@ class LlmConnectionTests(TestCase):
         self.assertEqual(response.status_code, 200)
         save_connection.assert_called_once_with(self.user, token)
         self.assertNotIn("token", response.json())
+
+    @patch("studio.api.ai.gateway_request")
+    @patch("studio.api.ai.stage_agent_attachments")
+    @patch("studio.api.ai.model_connection")
+    def test_chat_stages_attachments_and_streams_upload_path(
+        self, connection, stage_attachments, gateway
+    ):
+        connection.return_value = {"configured": True}
+        stage_attachments.return_value = {
+            "uploadPath": "uploads/package-test",
+            "files": [
+                {
+                    "name": "S2T.xlsx",
+                    "relativePath": "uploads/package-test/S2T.xlsx",
+                    "size": 4,
+                }
+            ],
+        }
+
+        class GatewayResponse:
+            ok = True
+            status_code = 200
+            text = ""
+            headers = {"content-type": "text/event-stream"}
+
+            @staticmethod
+            def iter_lines(**_kwargs):
+                yield b'data: {"choices":[{"delta":{"content":"ok"}}]}'
+                yield b""
+                yield b"data: [DONE]"
+                yield b""
+
+            @staticmethod
+            def close():
+                return None
+
+        gateway.return_value = GatewayResponse()
+        response = self.client.post(
+            "/api/ai/chat",
+            data=json.dumps({
+                "agentId": self.user.openclaw_agent_id,
+                "conversationId": "conversation-1",
+                "storage": "iceberg",
+                "messages": [{"role": "user", "content": "Обнови витрину"}],
+                "attachments": [{"name": "S2T.xlsx", "base64": "eGxzeA=="}],
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["X-B2C-Upload-Path"], "uploads/package-test")
+        self.assertIn(b'"content":"ok"', b"".join(response.streaming_content))
+        stage_attachments.assert_called_once_with(
+            self.user,
+            f"b2csql:{self.user.id}:conversation-1",
+            [{"name": "S2T.xlsx", "base64": "eGxzeA=="}],
+        )
+        request_body = gateway.call_args.kwargs["json"]
+        self.assertTrue(request_body["stream"])
+        self.assertIn(
+            "uploadPath: uploads/package-test",
+            request_body["messages"][-1]["content"],
+        )
+
+
+class OpenClawInternalApiTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="mart-agent",
+            email="mart-agent@example.test",
+            display_name="Mart Agent",
+            password="password-2026",
+            openclaw_agent_id="user-20-mart-agent",
+            openclaw_agent_status="ready",
+        )
+        self.other = User.objects.create_user(
+            username="other",
+            email="other@example.test",
+            display_name="Other",
+            password="password-2026",
+        )
+        self.workspace = Workspace.objects.create(
+            name="Sales Space", slug="sales-space", created_by=self.user
+        )
+        self.hidden_workspace = Workspace.objects.create(
+            name="Hidden Space", slug="hidden-space", created_by=self.other
+        )
+        WorkspaceMembership.objects.create(
+            workspace=self.workspace, user=self.user, role="developer"
+        )
+        WorkspaceMembership.objects.create(
+            workspace=self.hidden_workspace, user=self.other, role="admin"
+        )
+        self.datamart = Datamart.objects.create(
+            workspace=self.workspace,
+            created_by=self.user,
+            name="sales_mart",
+            display_name="Продажи",
+        )
+        Datamart.objects.create(
+            workspace=self.hidden_workspace,
+            created_by=self.other,
+            name="hidden_mart",
+            display_name="Скрытая витрина",
+        )
+
+    def _post(self, route, payload, token="internal-test-token"):
+        return self.client.post(
+            route,
+            data=json.dumps(payload),
+            content_type="application/json",
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+
+    def test_catalog_export_and_new_branch_are_scoped_to_agent_user(self):
+        with tempfile.TemporaryDirectory() as root:
+            root_path = Path(root)
+            token_file = root_path / "token"
+            token_file.write_text("internal-test-token\n", encoding="utf-8")
+            with override_settings(
+                REPOSITORIES_ROOT=root_path / "repositories",
+                OPENCLAW_CONTROL_TOKEN_FILE=token_file,
+            ):
+                save_repository(self.datamart, {
+                    "version": 5,
+                    "activeBranch": "main",
+                    "branches": {
+                        "main": {
+                            "contents": {
+                                "etl/orders/DDL.sql": "CREATE TABLE dm.orders (id BIGINT);"
+                            },
+                            "baseBranch": None,
+                            "author": "Mart Agent",
+                        }
+                    },
+                })
+
+                catalog = self._post(
+                    "/api/internal/openclaw/catalog",
+                    {"agentId": self.user.openclaw_agent_id},
+                )
+                self.assertEqual(catalog.status_code, 200)
+                self.assertEqual(
+                    [item["name"] for item in catalog.json()["workspaces"]],
+                    ["Sales Space"],
+                )
+                self.assertEqual(
+                    catalog.json()["workspaces"][0]["datamarts"][0]["name"],
+                    "sales_mart",
+                )
+
+                exported = self._post(
+                    "/api/internal/openclaw/repository",
+                    {
+                        "agentId": self.user.openclaw_agent_id,
+                        "workspace": "Sales Space",
+                        "datamart": "sales_mart",
+                        "branch": "main",
+                    },
+                )
+                self.assertEqual(exported.status_code, 200)
+                self.assertIn("etl/orders/DDL.sql", exported.json()["contents"])
+
+                imported = self._post(
+                    "/api/internal/openclaw/repository/import-branch",
+                    {
+                        "agentId": self.user.openclaw_agent_id,
+                        "workspace": "sales-space",
+                        "datamart": "Продажи",
+                        "branch": "openclaw/update-test",
+                        "baseBranch": "main",
+                        "contents": {
+                            **exported.json()["contents"],
+                            "etl/returns/DDL.sql": "CREATE TABLE dm.returns (id BIGINT);",
+                        },
+                    },
+                )
+                self.assertEqual(imported.status_code, 201)
+                repository = serialize_repository(self.datamart)
+                self.assertIn("openclaw/update-test", repository["branches"])
+                self.assertNotIn(
+                    "etl/returns/DDL.sql",
+                    repository["branches"]["main"]["contents"],
+                )
+
+    def test_internal_api_rejects_wrong_token(self):
+        with tempfile.TemporaryDirectory() as root:
+            token_file = Path(root) / "token"
+            token_file.write_text("internal-test-token\n", encoding="utf-8")
+            with override_settings(OPENCLAW_CONTROL_TOKEN_FILE=token_file):
+                response = self._post(
+                    "/api/internal/openclaw/catalog",
+                    {"agentId": self.user.openclaw_agent_id},
+                    token="wrong-token",
+                )
+        self.assertEqual(response.status_code, 401)

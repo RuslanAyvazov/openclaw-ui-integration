@@ -59,6 +59,20 @@ def validate_s2t(s2t_path: Path, context_path: Path) -> list[dict]:
     return tables
 
 
+def read_context_tables(context_path: Path) -> list[dict]:
+    """Читает уже проверенный контекст, например только для новых таблиц."""
+    if not context_path.is_file():
+        raise PackageError(f"Файл контекста не найден: {context_path}.")
+    try:
+        context = json.loads(context_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise PackageError(f"Не удалось прочитать контекст: {error}.") from error
+    tables = context.get("validator", {}).get("tables")
+    if not isinstance(tables, list) or not tables:
+        raise PackageError("В контексте отсутствуют таблицы для сопоставления SQL.")
+    return tables
+
+
 def script_name(path: Path) -> str:
     """Определяет режим DML по имени отдельного SQL-файла."""
     normalized = path.name.casefold()
@@ -156,12 +170,18 @@ def choose_stream(path: Path, sql: str, columns: list[str], specs: list[dict]) -
 
 
 def build_package(
-    tables: list[dict], sql_paths: list[Path], storage: str
-) -> tuple[dict, list[str]]:
+    tables: list[dict],
+    sql_paths: list[Path],
+    storage: str,
+    accepted_tables: list[dict] | None = None,
+) -> tuple[dict, list[str], list[str]]:
     """Собирает пакет и список выполненных сопоставлений."""
     specs = table_specs(tables)
+    accepted_specs = table_specs(accepted_tables) if accepted_tables is not None else specs
+    target_streams = {spec["stream"].casefold() for spec in specs}
     assignments: dict[tuple[str, str], str] = {}
     report = []
+    ignored = []
     errors = []
 
     for path in sorted(sql_paths, key=lambda item: (item.name.casefold(), str(item))):
@@ -175,7 +195,10 @@ def build_package(
             if storage == "parquet" and dml_name == "DML_arc.sql":
                 continue
             columns = select_columns(path, sql)
-            stream = choose_stream(path, sql, columns, specs)
+            stream = choose_stream(path, sql, columns, accepted_specs)
+            if stream.casefold() not in target_streams:
+                ignored.append(f"{path.name} -> {stream}/{dml_name}")
+                continue
             key = (stream.casefold(), dml_name)
             if key in assignments:
                 raise PackageError(
@@ -202,7 +225,7 @@ def build_package(
             dml_name: assignments[(stream.casefold(), dml_name)]
             for dml_name in required
         }
-    return package, report
+    return package, report, ignored
 
 
 def parse_args() -> argparse.Namespace:
@@ -215,6 +238,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sql-file", action="append", required=True)
     parser.add_argument("--output", required=True, help="Путь к dml_scripts.json")
     parser.add_argument("--context-json", required=True)
+    parser.add_argument(
+        "--source-context",
+        help=(
+            "Готовый проверенный context_config.json. Если указан, S2T повторно "
+            "не разбирается и SQL сопоставляется только с таблицами этого контекста."
+        ),
+    )
+    parser.add_argument(
+        "--accepted-context",
+        help=(
+            "Полный контекст S2T. SQL для таблиц вне source-context проверяется "
+            "по этому контексту и пропускается как относящийся к неизменившейся таблице."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -222,11 +259,22 @@ def main() -> int:
     """Проверяет S2T, сопоставляет SQL и записывает детерминированный JSON."""
     args = parse_args()
     try:
-        tables = validate_s2t(Path(args.s2t_file).resolve(), Path(args.context_json).resolve())
-        package, report = build_package(
+        context_path = Path(args.context_json).resolve()
+        tables = (
+            read_context_tables(Path(args.source_context).resolve())
+            if args.source_context
+            else validate_s2t(Path(args.s2t_file).resolve(), context_path)
+        )
+        accepted_tables = (
+            read_context_tables(Path(args.accepted_context).resolve())
+            if args.accepted_context
+            else None
+        )
+        package, report, ignored = build_package(
             tables,
             [Path(path).resolve() for path in args.sql_file],
             args.storage,
+            accepted_tables,
         )
         output = Path(args.output).resolve()
         output.parent.mkdir(parents=True, exist_ok=True)
@@ -240,9 +288,13 @@ def main() -> int:
         print(error, file=sys.stderr)
         return 2
 
-    print(f"SQL-прототипы сопоставлены: {len(report)} из {len(report)}.")
+    print(f"SQL-прототипы для изменяемых таблиц сопоставлены: {len(report)}.")
     for line in report:
         print(f"- {line}")
+    if ignored:
+        print(f"SQL-прототипы неизменившихся таблиц проверены и пропущены: {len(ignored)}.")
+        for line in ignored:
+            print(f"- {line}")
     print(f"DML JSON: {output}")
     return 0
 

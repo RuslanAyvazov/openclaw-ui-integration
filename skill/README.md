@@ -2,6 +2,10 @@
 
 Каталог `b2c_sql_project_2_0_builder` предназначен для глобальной установки на сервере OpenClaw через CLI:
 
+В Skill входят создание новой витрины, добавление новых потоков и расширение
+атрибутов существующих потоков. Для сценариев обновления дополнительно требуется
+TypeScript-плагин из каталога `b2c_build_from_upload`.
+
 ```bash
 openclaw skills install \
   ./skill/b2c_sql_project_2_0_builder \

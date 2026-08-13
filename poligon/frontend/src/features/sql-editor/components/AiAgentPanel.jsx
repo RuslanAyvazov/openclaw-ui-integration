@@ -511,6 +511,7 @@ export default function AiAgentPanel({ datamartId, open, onClose, onInsertSql, o
     const [historyReady, setHistoryReady] = useState(false);
     const [draft, setDraft] = useState('');
     const [thinking, setThinking] = useState(false);
+    const [streamText, setStreamText] = useState('');
     const [storage, setStorage] = useState('iceberg');
     const [attachments, setAttachments] = useState([]);
     const [building, setBuilding] = useState(false);
@@ -600,7 +601,7 @@ export default function AiAgentPanel({ datamartId, open, onClose, onInsertSql, o
         if (view !== 'chat') return;
         const el = bodyRef.current;
         if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-    }, [messages, thinking, view]);
+    }, [messages, thinking, streamText, view]);
 
     // Focus the input when the panel opens.
     useEffect(() => { if (open && view === 'chat') inputRef.current?.focus(); }, [open, view]);
@@ -635,6 +636,7 @@ export default function AiAgentPanel({ datamartId, open, onClose, onInsertSql, o
         }
         setMessages(prev => [...prev, { role: 'user', text: prompt }]);
         setDraft('');
+        setStreamText('');
         if (inputRef.current) inputRef.current.style.height = 'auto';
 
         // Distribution intent → offer the SQL-window picker instead of a text reply.
@@ -648,17 +650,40 @@ export default function AiAgentPanel({ datamartId, open, onClose, onInsertSql, o
 
         setThinking(true);
         try {
-            const reply = await sendAgentMessage({ prompt, model, history: messages, conversationId: convId });
+            const selectedAttachments = [...attachments];
+            const reply = await sendAgentMessage({
+                prompt,
+                model,
+                history: messages,
+                conversationId: convId,
+                attachments: selectedAttachments,
+                storage,
+                onDelta: setStreamText,
+            });
             // Agent-built datamart project: NOT saved automatically — the card
             // in the thread asks the user to create a datamart card first.
-            setMessages(prev => [...prev, reply]);
+            setMessages(prev => {
+                const next = [...prev];
+                if (reply.upload?.uploadPath) {
+                    for (let index = next.length - 1; index >= 0; index--) {
+                        if (next[index]?.role === 'user' && !next[index].uploadPath) {
+                            next[index] = { ...next[index], uploadPath: reply.upload.uploadPath };
+                            break;
+                        }
+                    }
+                }
+                return [...next, { ...reply, upload: undefined }];
+            });
+            setStreamText('');
+            if (selectedAttachments.length) setAttachments([]);
         } catch (err) {
+            setStreamText('');
             const hint = ' Проверьте состояние контейнеров OpenClaw и backend.';
             setMessages(prev => [...prev, { role: 'assistant', text: `Не удалось получить ответ.${hint} (${err?.message || 'ошибка сети'})` }]);
         } finally {
             setThinking(false);
         }
-    }, [model, thinking, messages, convId, connection]);
+    }, [model, thinking, messages, convId, connection, attachments, storage]);
 
     async function connectModel(event) {
         event.preventDefault();
@@ -693,7 +718,7 @@ export default function AiAgentPanel({ datamartId, open, onClose, onInsertSql, o
     async function buildPackage() {
         if (building) return;
         const s2tFiles = attachments.filter(file => /\.xlsx$/i.test(file.name));
-        const prototypeFiles = attachments.filter(file => /\.(sql|json)$/i.test(file.name));
+        const prototypeFiles = attachments.filter(file => /\.(sql|txt|json)$/i.test(file.name));
         if (s2tFiles.length !== 1) {
             setBuildError('Добавьте ровно один файл S2T.xlsx.');
             return;
@@ -911,7 +936,15 @@ export default function AiAgentPanel({ datamartId, open, onClose, onInsertSql, o
                                     </div>
                                 )
                             ))}
-                            {thinking && (
+                            {thinking && streamText && (
+                                <div className="ai-msg ai-msg-bot">
+                                    <span className="ai-avatar ai-avatar-live" aria-hidden="true"><i className="fas fa-wand-magic-sparkles" /></span>
+                                    <div className="ai-bubble ai-bubble-bot" aria-live="polite">
+                                        <div className="ai-text"><MarkdownLite text={streamText} /></div>
+                                    </div>
+                                </div>
+                            )}
+                            {thinking && !streamText && (
                                 <div className="ai-msg ai-msg-bot">
                                     <span className="ai-avatar ai-avatar-live" aria-hidden="true"><i className="fas fa-wand-magic-sparkles" /></span>
                                     <div className="ai-bubble ai-bubble-bot ai-thinking" aria-live="polite">
@@ -957,7 +990,7 @@ export default function AiAgentPanel({ datamartId, open, onClose, onInsertSql, o
             )}
 
             <form className="ai-input" onSubmit={e => { e.preventDefault(); send(draft); }}>
-                <input ref={fileRef} type="file" multiple accept=".xlsx,.sql,.json" hidden onChange={selectFiles} />
+                <input ref={fileRef} type="file" multiple accept=".xlsx,.sql,.txt,.json" hidden onChange={selectFiles} />
                 <div className="ai-input-box">
                     {activeModel.capability === 'b2c-mart' && (
                         <button type="button" className="ai-attach" onClick={() => fileRef.current?.click()}

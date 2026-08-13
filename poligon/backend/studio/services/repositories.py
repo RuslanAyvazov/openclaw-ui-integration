@@ -1,6 +1,8 @@
 import os
+import re
 import shutil
 import tempfile
+from datetime import datetime, timezone as datetime_timezone
 from pathlib import Path, PurePosixPath
 from urllib.parse import quote
 
@@ -13,6 +15,7 @@ from studio.models import RepositoryState
 MAX_FILES_PER_BRANCH = 2000
 MAX_FILE_BYTES = 8 * 1024 * 1024
 MAX_BRANCH_BYTES = 80 * 1024 * 1024
+BRANCH_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,159}$")
 
 
 def _repo_root(datamart):
@@ -91,15 +94,25 @@ def _ensure_branch_skeleton(datamart, branch_name):
     (branch_dir / "resources").mkdir(parents=True, exist_ok=True)
 
 
-def _read_branch(datamart, branch_name):
+def _read_branch_with_metadata(datamart, branch_name):
     branch_dir = _branch_dir(datamart, branch_name)
     _ensure_branch_skeleton(datamart, branch_name)
     contents = {}
+    file_updated_at = {}
     for file_path in sorted(branch_dir.rglob("*"), key=lambda item: item.as_posix()):
         if not file_path.is_file():
             continue
         relative = file_path.relative_to(branch_dir).as_posix()
         contents[relative] = file_path.read_text(encoding="utf-8")
+        file_updated_at[relative] = datetime.fromtimestamp(
+            file_path.stat().st_mtime,
+            tz=datetime_timezone.utc,
+        ).isoformat()
+    return contents, file_updated_at
+
+
+def _read_branch(datamart, branch_name):
+    contents, _ = _read_branch_with_metadata(datamart, branch_name)
     return contents
 
 
@@ -147,10 +160,11 @@ def serialize_repository(datamart):
     branches_meta = state.branches_meta or {"main": _default_state(datamart)["branchesMeta"]["main"]}
     branches = {}
     for name in sorted(branches_meta, key=lambda value: (value != "main", value.casefold())):
-        contents = _read_branch(datamart, name)
+        contents, file_updated_at = _read_branch_with_metadata(datamart, name)
         branches[name] = {
             "structure": _tree_for(datamart, contents),
             "contents": contents,
+            "fileUpdatedAt": file_updated_at,
             **(branches_meta.get(name) or {}),
         }
     active = state.active_branch if state.active_branch in branches else "main"
@@ -160,6 +174,19 @@ def serialize_repository(datamart):
         "activeBranch": active,
         "pullRequests": state.pull_requests or [],
         "commits": state.commits or [],
+    }
+
+
+def export_branch(datamart, branch_name="main"):
+    """Возвращает файлы одной ветки без сериализации остальных веток."""
+    state = _get_state(datamart)
+    branches_meta = state.branches_meta or {}
+    if branch_name not in branches_meta:
+        raise ValueError(f"Ветка {branch_name} не найдена.")
+    return {
+        "branch": branch_name,
+        "contents": _read_branch(datamart, branch_name),
+        **(branches_meta.get(branch_name) or {}),
     }
 
 
@@ -191,6 +218,10 @@ def _write_branch(datamart, branch_name, contents):
             _assert_scoped(destination, temp_root)
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_text(content, encoding="utf-8", newline="\n")
+            previous_file = target.joinpath(*relative.parts)
+            if previous_file.is_file() and previous_file.read_bytes() == encoded:
+                previous_stat = previous_file.stat()
+                os.utime(destination, ns=(previous_stat.st_atime_ns, previous_stat.st_mtime_ns))
         if target.exists():
             shutil.rmtree(target)
         os.replace(temp_root, target)
@@ -235,6 +266,51 @@ def save_repository(datamart, payload):
     state.commits = payload.get("commits") if isinstance(payload.get("commits"), list) else []
     state.save()
     return serialize_repository(datamart)
+
+
+def create_agent_branch(datamart, branch_name, base_branch, contents, author):
+    """Создаёт новую ветку агента из готового набора файлов, не меняя main."""
+    branch_name = str(branch_name or "").strip()
+    base_branch = str(base_branch or "main").strip()
+    if not BRANCH_NAME.fullmatch(branch_name) or ".." in branch_name.split("/"):
+        raise ValueError("Некорректное имя ветки агента.")
+
+    state = _get_state(datamart)
+    branches_meta = dict(state.branches_meta or {})
+    if base_branch not in branches_meta:
+        raise ValueError(f"Исходная ветка {base_branch} не найдена.")
+    if branch_name in branches_meta:
+        raise ValueError(f"Ветка {branch_name} уже существует.")
+
+    _write_branch(datamart, branch_name, contents)
+    now = timezone.now().isoformat()
+    branches_meta[branch_name] = {
+        "baseBranch": base_branch,
+        "createdAt": now,
+        "author": str(author or datamart.created_by.public_name),
+    }
+    commits = list(state.commits or [])
+    commits.insert(0, {
+        "hash": f"agent-{timezone.now().strftime('%Y%m%d%H%M%S%f')}",
+        "message": "feat: add streams from S2T",
+        "author": str(author or datamart.created_by.public_name),
+        "initials": "AI",
+        "time": "только что",
+        "additions": len(contents),
+        "deletions": 0,
+        "changedFiles": len(contents),
+        "branch": branch_name,
+    })
+    state.branches_meta = branches_meta
+    state.commits = commits
+    state.active_branch = branch_name
+    state.save(update_fields=["branches_meta", "commits", "active_branch", "updated_at"])
+    return {
+        "datamartId": datamart.id,
+        "branch": branch_name,
+        "baseBranch": base_branch,
+        "fileCount": len(contents),
+    }
 
 
 def reset_repository(datamart):

@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from django.conf import settings
-from django.http import JsonResponse
+from django.http import JsonResponse, StreamingHttpResponse
 from django.utils import timezone
 
 from studio.api.common import api_login_required, json_api, json_body, method_not_allowed
@@ -13,6 +13,7 @@ from studio.services.openclaw import (
     gateway_request,
     model_connection,
     save_model_connection,
+    stage_agent_attachments,
 )
 
 
@@ -20,15 +21,30 @@ UI_MODE_PROMPT = "\n".join([
     "Запрос приходит из B2C-SQL UI через ИИ-ассистент.",
     "Ты персональный агент текущего пользователя и работаешь только со сборкой B2C-витрин.",
     "Всегда используй общий навык build-b2c-mart.",
-    "Не записывай context_config.json, dm_res или SQL-файлы на диск и не спрашивай каталог.",
-    "Документы и детерминированную Python-сборку обрабатывает интерфейс кнопкой «Проверить и собрать».",
-    "Помогай кратко собрать пакет: S2T.xlsx, формат iceberg/parquet и SQL-прототипы.",
+    "Есть три сценария: создание новой витрины, добавление новых потоков и расширение атрибутов существующих потоков.",
+    "Для новой витрины документы и Python-сборку запускает кнопка «Проверить и собрать»; сам файлы не записывай.",
+    "Если пользователь просит добавить поток, расширить атрибуты или просто пишет «обнови» с S2T, сначала обязательно спроси одним сообщением: «В каком пространстве находится витрина и как она называется?».",
+    "Не запускай доработку, пока пользователь не назвал и пространство, и витрину.",
+    "После ответа проверь пару пространство-витрина инструментом b2c_list_accessible_datamarts, затем вызови b2c_update_mart_from_upload_path.",
+    "Передавай инструменту uploadPath из сообщения backend.",
+    "Инструмент сам определяет новые таблицы и новые атрибуты, получает разрешённую копию ветки, запускает Python/Bash в workspace агента и создаёт отдельную ветку openclaw/update-*.",
+    "Никогда не проси пользователя назвать файловый путь репозитория и никогда не изменяй main.",
+    "Помогай кратко собрать пакет: S2T.xlsx, формат iceberg/parquet и полные SQL-прототипы только для новых или расширяемых таблиц.",
     "Для Iceberg нужны DML_inc.sql и DML_arc.sql на каждую таблицу; для Parquet — только DML_inc.sql.",
     "Не спрашивай повторно формат или документы, которые пользователь уже приложил.",
     "Не придумывай SQL и не сопоставляй прототипы рассуждением модели.",
-    "После успешной сборки интерфейс сам предложит создать карточку витрины.",
+    "Если инструмент сообщает, что витрина не соответствует формату 2.0, передай это пользователю без попытки обхода.",
     "Отвечай кратко; не выводи внутренний анализ и не генерируй блок b2c-project.",
 ])
+
+
+def _stream_gateway_response(response):
+    """Передаёт события OpenClaw в UI сразу после их получения."""
+    try:
+        for line in response.iter_lines(chunk_size=1, decode_unicode=False):
+            yield line + b"\n"
+    finally:
+        response.close()
 
 
 @json_api
@@ -118,25 +134,56 @@ def chat(request):
         return JsonResponse({"error": f"Не удалось проверить подключение модели: {error}"}, status=503)
 
     conversation_id = str(data.get("conversationId") or "main")[:96]
+    session_key = f"b2csql:{request.user.id}:{conversation_id}"
+    upload = None
+    storage = str(data.get("storage") or "iceberg").strip().casefold()
+    if storage not in {"iceberg", "parquet"}:
+        return JsonResponse({"error": "storage должен быть iceberg или parquet"}, status=400)
+    attachments = data.get("attachments")
+    if attachments:
+        try:
+            upload = stage_agent_attachments(request.user, session_key, attachments)
+        except Exception as error:
+            return JsonResponse({"error": f"Не удалось передать вложения агенту: {error}"}, status=422)
+
+    forwarded_messages = [dict(message) for message in messages if isinstance(message, dict)]
+    if upload and forwarded_messages:
+        file_lines = "\n".join(
+            f"- {item['relativePath']}" for item in upload.get("files") or []
+        )
+        forwarded_messages[-1]["content"] = (
+            f"{forwarded_messages[-1].get('content') or ''}\n\n"
+            f"Вложения сохранены в workspace агента. uploadPath: {upload['uploadPath']}.\n"
+            f"Формат хранения: {storage}.\n"
+            f"Файлы:\n{file_lines}"
+        )
     try:
         response = gateway_request(
             "/v1/chat/completions",
             method="POST",
             json={
                 "model": f"openclaw/{selected_agent}",
-                "user": f"b2csql:{request.user.id}:{conversation_id}",
-                "messages": [{"role": "system", "content": UI_MODE_PROMPT}, *messages],
+                "user": session_key,
+                "messages": [{"role": "system", "content": UI_MODE_PROMPT}, *forwarded_messages],
+                "stream": True,
             },
             timeout=180,
+            stream=True,
         )
         if not response.ok:
             return JsonResponse({
                 "error": f"OpenClaw gateway responded {response.status_code}",
                 "detail": response.text[:500],
             }, status=502)
-        payload = response.json()
-        text = (((payload.get("choices") or [{}])[0].get("message") or {}).get("content") or "")
-        return JsonResponse({"text": text, "usage": payload.get("usage")})
+        result = StreamingHttpResponse(
+            _stream_gateway_response(response),
+            content_type=response.headers.get("content-type", "text/event-stream"),
+        )
+        result["Cache-Control"] = "no-cache, no-store"
+        result["X-Accel-Buffering"] = "no"
+        if upload and upload.get("uploadPath"):
+            result["X-B2C-Upload-Path"] = upload["uploadPath"]
+        return result
     except Exception as error:
         return JsonResponse({"error": f"OpenClaw gateway is unreachable: {error}"}, status=502)
 

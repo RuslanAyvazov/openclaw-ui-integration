@@ -76,7 +76,7 @@ SESSION_COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
 SESSION_COOKIE_AGE = 7 * 24 * 60 * 60
 SESSION_SAVE_EVERY_REQUEST = True
 
-DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024
 REPOSITORIES_ROOT = Path(os.getenv("REPOSITORIES_ROOT", "/data/repositories"))
 OPENCLAW_CONTROL_URL = os.getenv("OPENCLAW_CONTROL_URL", "http://openclaw:18890").rstrip("/")
 OPENCLAW_CONTROL_TOKEN_FILE = Path(os.getenv("OPENCLAW_CONTROL_TOKEN_FILE", "/run/openclaw-control/token"))

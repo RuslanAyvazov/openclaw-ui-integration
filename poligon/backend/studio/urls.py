@@ -1,6 +1,6 @@
 from django.urls import path
 
-from studio.api import ai, auth, datamarts, ops, workspaces
+from studio.api import ai, auth, datamarts, openclaw_internal, ops, workspaces
 
 
 urlpatterns = [
@@ -37,4 +37,8 @@ urlpatterns = [
     path("ai/conversations", ai.conversations),
     path("ai/conversations/active", ai.active_conversation),
     path("ai/conversations/<str:conversation_id>", ai.conversations),
+
+    path("internal/openclaw/catalog", openclaw_internal.catalog),
+    path("internal/openclaw/repository", openclaw_internal.repository),
+    path("internal/openclaw/repository/import-branch", openclaw_internal.import_branch),
 ]

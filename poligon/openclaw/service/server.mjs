@@ -2,7 +2,7 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { cpSync, chmodSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 
 const home = resolve(process.env.OPENCLAW_HOME || '/home/node/.openclaw');
 const configPath = resolve(process.env.OPENCLAW_CONFIG_PATH || join(home, 'openclaw.json'));
@@ -11,6 +11,8 @@ const gatewayTokenPath = join(home, '.gateway-token');
 const templateDir = '/opt/b2c-openclaw/templates';
 const sourceSkillDir = '/opt/b2c-openclaw/skill';
 const skillName = 'build-b2c-mart';
+const sourcePluginDir = '/opt/b2c-openclaw/plugins/b2c-build-tool';
+const pluginName = 'b2c-build-tool';
 const provider = process.env.OPENCLAW_PROVIDER || 'custom-routerai-ru';
 const providerName = process.env.OPENCLAW_PROVIDER_NAME || 'RouterAI';
 const providerBaseUrl = process.env.OPENCLAW_PROVIDER_BASE_URL || 'https://routerai.ru/api/v1';
@@ -21,6 +23,8 @@ const gatewayPort = Number(process.env.OPENCLAW_GATEWAY_PORT || 18789);
 const controlPort = Number(process.env.OPENCLAW_CONTROL_PORT || 18890);
 const controlHost = process.env.OPENCLAW_CONTROL_HOST || '0.0.0.0';
 const deniedTools = ['exec', 'process', 'read', 'write', 'edit', 'apply_patch', 'browser'];
+const maximumUploadFiles = 200;
+const maximumUploadBytes = 64 * 1024 * 1024;
 
 let gatewayReady = false;
 let operationQueue = Promise.resolve();
@@ -81,6 +85,23 @@ function bootstrap(gatewayToken) {
     config.agents.defaults.models = { ...(config.agents.defaults.models || {}), [`${provider}/*`]: {} };
     config.agents.defaults.workspace = join(home, 'workspace');
     config.agents.defaults.maxConcurrent = 4;
+    config.plugins = config.plugins || {};
+    config.plugins.load = config.plugins.load || {};
+    config.plugins.load.paths = Array.from(new Set([
+        ...(Array.isArray(config.plugins.load.paths) ? config.plugins.load.paths : []),
+        sourcePluginDir,
+    ]));
+    config.plugins.entries = config.plugins.entries || {};
+    config.plugins.entries[pluginName] = {
+        ...(config.plugins.entries[pluginName] || {}),
+        enabled: true,
+        config: {
+            skillRoot: installedSkill,
+            backendBaseUrl: process.env.B2C_BACKEND_URL || 'http://backend:8000',
+            controlTokenFile: controlTokenPath,
+            timeoutSeconds: 900,
+        },
+    };
     config.gateway = {
         ...(config.gateway || {}),
         port: gatewayPort,
@@ -140,6 +161,83 @@ function agentPaths(agentId) {
     return { workspace, agentDir };
 }
 
+function safeUploadFileName(value) {
+    const name = String(value || '').trim().replaceAll('\\', '/');
+    if (!name || name.includes('\0') || basename(name) !== name) {
+        throw new Error('Некорректное имя вложения.');
+    }
+    const safe = name.replace(/[^A-Za-zА-Яа-яЁё0-9_. -]/g, '_').replace(/^\.+/, '');
+    if (!safe || safe.length > 240) throw new Error('Некорректное имя вложения.');
+    return safe;
+}
+
+async function saveAttachments(payload) {
+    const agentId = safeAgentId(payload.agentId);
+    const files = Array.isArray(payload.files) ? payload.files : [];
+    if (!files.length || files.length > maximumUploadFiles) {
+        throw new Error(`Нужно передать от 1 до ${maximumUploadFiles} файлов.`);
+    }
+    if (!(await listAgents()).some(item => item.id === agentId)) {
+        throw new Error('Персональный агент не найден.');
+    }
+
+    const { workspace } = agentPaths(agentId);
+    const packageName = `package-${Date.now().toString(36)}-${randomBytes(6).toString('hex')}`;
+    const uploadsRoot = resolve(workspace, 'uploads');
+    const uploadPath = `uploads/${packageName}`;
+    const target = resolve(workspace, uploadPath);
+    const temporary = resolve(uploadsRoot, `.${packageName}.tmp`);
+    if (!target.startsWith(`${uploadsRoot}/`) || !temporary.startsWith(`${uploadsRoot}/`)) {
+        throw new Error('Каталог загрузки вышел за границы workspace агента.');
+    }
+
+    rmSync(temporary, { recursive: true, force: true });
+    mkdirSync(temporary, { recursive: true, mode: 0o700 });
+    let total = 0;
+    const saved = [];
+    const savedNames = new Set();
+    try {
+        for (const item of files) {
+            const name = safeUploadFileName(item?.name);
+            const nameKey = name.toLocaleLowerCase('ru-RU');
+            if (savedNames.has(nameKey)) throw new Error(`Имя файла ${name} повторяется в пакете.`);
+            savedNames.add(nameKey);
+            const encoded = String(item?.base64 || '');
+            if (!encoded || !/^[A-Za-z0-9+/]*={0,2}$/.test(encoded)) {
+                throw new Error(`Файл ${name} передан не в base64.`);
+            }
+            const data = Buffer.from(encoded, 'base64');
+            if (!data.length || data.toString('base64').replace(/=+$/, '') !== encoded.replace(/=+$/, '')) {
+                throw new Error(`Файл ${name} передан не в base64.`);
+            }
+            total += data.length;
+            if (total > maximumUploadBytes) {
+                throw new Error('Общий размер вложений превышает 64 МБ.');
+            }
+            const destination = resolve(temporary, name);
+            if (!destination.startsWith(`${temporary}/`)) {
+                throw new Error(`Путь файла ${name} вышел за границы пакета.`);
+            }
+            writeFileSync(destination, data, { mode: 0o600 });
+            saved.push({
+                name,
+                relativePath: `${uploadPath}/${name}`,
+                size: data.length,
+            });
+        }
+        renameSync(temporary, target);
+    } catch (error) {
+        rmSync(temporary, { recursive: true, force: true });
+        throw error;
+    }
+    return {
+        uploadPath,
+        agentId,
+        sessionKey: String(payload.sessionKey || ''),
+        files: saved,
+    };
+}
+
 function renderTemplate(fileName, values) {
     let text = readFileSync(join(templateDir, fileName), 'utf8');
     for (const [key, value] of Object.entries(values)) text = text.replaceAll(`{{${key}}}`, String(value));
@@ -151,7 +249,27 @@ function hardenAgent(agentId) {
     const entries = Array.isArray(config.agents?.list) ? config.agents.list : [];
     const entry = entries.find(item => item.id === agentId);
     if (!entry) return;
-    entry.tools = { ...(entry.tools || {}), deny: deniedTools };
+    const currentTools = entry.tools || {};
+    const b2cTools = ['b2c_list_accessible_datamarts', 'b2c_update_mart_from_upload_path'];
+    entry.tools = Array.isArray(currentTools.allow)
+        ? {
+            ...currentTools,
+            deny: deniedTools,
+            allow: Array.from(new Set([
+                ...currentTools.allow.filter(tool => !String(tool).startsWith('b2c_')),
+                ...b2cTools,
+            ])),
+        }
+        : {
+            ...currentTools,
+            deny: deniedTools,
+            alsoAllow: Array.from(new Set([
+                ...(Array.isArray(currentTools.alsoAllow)
+                    ? currentTools.alsoAllow.filter(tool => !String(tool).startsWith('b2c_'))
+                    : []),
+                ...b2cTools,
+            ])),
+        };
     writeConfig(config);
 }
 
@@ -294,13 +412,19 @@ async function proxyGateway(request, response, gatewayToken, path) {
         body,
         signal: AbortSignal.timeout(210000),
     });
-    const payload = Buffer.from(await upstream.arrayBuffer());
     response.writeHead(upstream.status, {
         'content-type': upstream.headers.get('content-type') || 'application/json; charset=utf-8',
-        'content-length': payload.length,
         'cache-control': 'no-store',
+        'x-accel-buffering': 'no',
     });
-    response.end(payload);
+    if (!upstream.body) {
+        response.end();
+        return;
+    }
+    for await (const chunk of upstream.body) {
+        response.write(Buffer.from(chunk));
+    }
+    response.end();
 }
 
 const controlToken = persistentSecret(controlTokenPath);
@@ -367,6 +491,11 @@ const server = createServer(async (request, response) => {
         if (request.method === 'POST' && url.pathname === '/agents/credential') {
             const payload = await readJson(request, 16 * 1024);
             jsonResponse(response, 200, await serialized(() => saveCredential(payload)));
+            return;
+        }
+        if (request.method === 'POST' && url.pathname === '/agents/attachments') {
+            const payload = await readJson(request, 96 * 1024 * 1024);
+            jsonResponse(response, 201, await saveAttachments(payload));
             return;
         }
         if (url.pathname === '/openclaw/v1/models' && request.method === 'GET') {

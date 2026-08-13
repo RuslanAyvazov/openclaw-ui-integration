@@ -27,7 +27,7 @@ def _control_token():
     return token
 
 
-def control_request(path, *, method="GET", json=None, timeout=90):
+def control_request(path, *, method="GET", json=None, timeout=90, stream=False):
     return requests.request(
         method,
         f"{settings.OPENCLAW_CONTROL_URL}{path}",
@@ -37,6 +37,7 @@ def control_request(path, *, method="GET", json=None, timeout=90):
         },
         json=json,
         timeout=timeout,
+        stream=stream,
     )
 
 
@@ -121,5 +122,34 @@ def save_model_connection(user, token):
     return response.json()
 
 
-def gateway_request(path, *, method="GET", json=None, timeout=180):
-    return control_request(f"/openclaw{path}", method=method, json=json, timeout=timeout)
+def gateway_request(path, *, method="GET", json=None, timeout=180, stream=False):
+    return control_request(
+        f"/openclaw{path}",
+        method=method,
+        json=json,
+        timeout=timeout,
+        stream=stream,
+    )
+
+
+def stage_agent_attachments(user, session_key, files):
+    """Сохраняет вложения в uploads текущего workspace персонального агента."""
+    if not isinstance(files, list) or not files:
+        return None
+    response = control_request(
+        "/agents/attachments",
+        method="POST",
+        json={
+            "agentId": user.openclaw_agent_id,
+            "sessionKey": session_key,
+            "files": files,
+        },
+        timeout=180,
+    )
+    if not response.ok:
+        try:
+            detail = response.json().get("error")
+        except ValueError:
+            detail = response.text
+        raise RuntimeError(detail or "OpenClaw не сохранил вложения.")
+    return response.json()

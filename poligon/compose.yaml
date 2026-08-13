@@ -36,6 +36,7 @@ services:
       OPENCLAW_PROVIDER_BASE_URL: ${OPENCLAW_PROVIDER_BASE_URL:-https://routerai.ru/api/v1}
       OPENCLAW_DEFAULT_MODEL: ${OPENCLAW_DEFAULT_MODEL:-custom-routerai-ru/deepseek/deepseek-v4-pro}
       OPENCLAW_MODEL_NAME: ${OPENCLAW_MODEL_NAME:-DeepSeek V4 Pro}
+      B2C_BACKEND_URL: http://backend:8000
       OPENCLAW_DISABLE_BONJOUR: "1"
       TZ: ${TZ:-Europe/Moscow}
     volumes:

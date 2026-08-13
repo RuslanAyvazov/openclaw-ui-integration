@@ -36,7 +36,7 @@ DEVOPS_CONFIG = {
 
 
 def read_context(path):
-    """Читает общий контекст и возвращает B2C SQL-конфигурации."""
+    """Читает общий контекст витрины формата 2.0."""
     path = Path(path)
     if not path.is_file():
         raise MartExportError(FILE_NOT_FOUND.format(path=path))
@@ -47,7 +47,7 @@ def read_context(path):
     configs = context.get("b2c_sql_configs") if isinstance(context, dict) else None
     if not isinstance(configs, dict) or not configs:
         raise MartExportError(CONFIGS_MISSING)
-    return configs
+    return context
 
 
 def validate_name(value, kind):
@@ -85,7 +85,7 @@ def replace_config_key(config, old_key, new_key, value):
     }
 
 
-def export_stream(stream_dir, stream_name, config):
+def export_stream(stream_dir, stream_name, config, ddl):
     """Выносит встроенные SQL и DQC одного потока в отдельные файлы."""
     if not isinstance(config, dict):
         raise MartExportError(INVALID_CONFIG.format(stream=stream_name))
@@ -157,8 +157,25 @@ def export_stream(stream_dir, stream_name, config):
                     f"{HDFS_APP_ROOT}/etl/{stream_name}/{filename}",
                 )
 
+    ddl_sections = []
+    for table_kind in ("pa_table", "hist_table", "stg_table"):
+        table_ddl = ddl.get(table_kind) if isinstance(ddl, dict) else None
+        lines = table_ddl.get("create_table") if isinstance(table_ddl, dict) else None
+        if not isinstance(lines, list) or not lines:
+            raise MartExportError(
+                WRITE_FAILED.format(
+                    path=stream_dir / "DDL.sql",
+                    reason=f"в context_config.json отсутствует DDL {table_kind}",
+                )
+            )
+        ddl_sections.append("\n".join(str(line) for line in lines).rstrip())
+
+    (stream_dir / "DDL.sql").write_text(
+        "\n\n".join(ddl_sections) + "\n",
+        encoding="utf-8",
+    )
     write_json(stream_dir / "b2c_sql_config.json", result)
-    return len(files) + 1
+    return len(files) + 2
 
 
 def replace_mart(staging, target):
@@ -185,7 +202,13 @@ def replace_mart(staging, target):
 
 def export_mart(context_path, target_path=None):
     """Раскладывает b2c_sql_configs в фиксированную витрину dm_res."""
-    configs = read_context(context_path)
+    context = read_context(context_path)
+    configs = context["b2c_sql_configs"]
+    ddl_by_table = context.get("ddl")
+    if not isinstance(ddl_by_table, dict) or not ddl_by_table:
+        raise MartExportError(
+            WRITE_FAILED.format(path=context_path, reason="отсутствует раздел ddl")
+        )
     project_root = Path(__file__).resolve().parents[1]
     target = (
         Path(target_path).resolve()
@@ -205,7 +228,9 @@ def export_mart(context_path, target_path=None):
         etl_dir.mkdir()
         resources_dir.mkdir()
         write_json(resources_dir / "devops.json", DEVOPS_CONFIG)
-        file_count += 1
+        write_json(resources_dir / "b2c_format.json", {"formatVersion": "2.0"})
+        write_json(resources_dir / "context_config.json", context)
+        file_count += 3
 
         for table, modes in configs.items():
             table = validate_name(table, "таблицы")
@@ -220,6 +245,7 @@ def export_mart(context_path, target_path=None):
                     stream_dir,
                     stream_name,
                     config,
+                    ddl_by_table.get(table),
                 )
                 stream_count += 1
 

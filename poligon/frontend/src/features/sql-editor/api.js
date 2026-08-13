@@ -100,11 +100,32 @@ function splitProjectFromReply(raw = '') {
     return { text: text || raw.trim(), project: hasFiles ? parsed : undefined };
 }
 
-export async function sendAgentMessage({ prompt, model = 'b2c-sql-agent', history = [], conversationId }) {
+async function attachmentPayload(file) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+    }
+    return { name: file.name, base64: btoa(binary) };
+}
+
+export async function sendAgentMessage({
+    prompt,
+    model = 'b2c-sql-agent',
+    history = [],
+    conversationId,
+    attachments = [],
+    storage = 'iceberg',
+    onDelta,
+}) {
     const messages = [
         ...history.slice(-12).map(m => ({
             role: m.role === 'user' ? 'user' : 'assistant',
-            content: m.sql ? `${m.text}\n\`\`\`sql\n${m.sql}\n\`\`\`` : m.text,
+            content: [
+                m.sql ? `${m.text}\n\`\`\`sql\n${m.sql}\n\`\`\`` : m.text,
+                m.uploadPath ? `Ранее загруженный пакет в workspace: ${m.uploadPath}.` : '',
+            ].filter(Boolean).join('\n\n'),
         })),
         { role: 'user', content: prompt },
     ];
@@ -114,13 +135,78 @@ export async function sendAgentMessage({ prompt, model = 'b2c-sql-agent', histor
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages, agentId: model, conversationId }),
+        body: JSON.stringify({
+            messages,
+            agentId: model,
+            conversationId,
+            attachments: await Promise.all(attachments.map(attachmentPayload)),
+            storage,
+        }),
     });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || `${res.status} ${res.statusText}`);
-    const { text: withoutProject, project } = splitProjectFromReply(data.text || '');
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `${res.status} ${res.statusText}`);
+    }
+    if (!res.body) throw new Error('Сервер не вернул поток ответа.');
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let rawText = '';
+    let usage = null;
+
+    function consumeEvent(block) {
+        const data = block.split(/\r?\n/)
+            .filter(line => line.startsWith('data:'))
+            .map(line => line.slice(5).trimStart())
+            .join('\n');
+        if (!data || data === '[DONE]') return;
+        let payload;
+        try {
+            payload = JSON.parse(data);
+        } catch {
+            return;
+        }
+        if (payload.error) {
+            throw new Error(payload.error.message || payload.error || 'Ошибка ответа модели.');
+        }
+        if (payload.usage) usage = payload.usage;
+        const choice = payload.choices?.[0] || {};
+        const content = choice.delta?.content ?? choice.message?.content;
+        const delta = typeof content === 'string'
+            ? content
+            : (Array.isArray(content) ? content.map(item => item?.text || '').join('') : '');
+        if (!delta) return;
+        rawText += delta;
+        onDelta?.(rawText);
+    }
+
+    while (true) {
+        const { value, done } = await reader.read();
+        buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+        let boundary = buffer.match(/\r?\n\r?\n/);
+        while (boundary) {
+            const block = buffer.slice(0, boundary.index);
+            buffer = buffer.slice(boundary.index + boundary[0].length);
+            consumeEvent(block);
+            boundary = buffer.match(/\r?\n\r?\n/);
+        }
+        if (done) break;
+    }
+    if (buffer.trim()) consumeEvent(buffer);
+
+    const uploadPath = res.headers.get('X-B2C-Upload-Path');
+    const { text: withoutProject, project } = splitProjectFromReply(rawText);
     const { text, sql } = splitSqlFromReply(withoutProject);
-    return { role: 'assistant', text, sql, project, model };
+    return {
+        role: 'assistant',
+        text,
+        sql,
+        project,
+        model,
+        usage,
+        upload: uploadPath ? { uploadPath } : null,
+    };
 }
 
 async function jsonFetch(url, options = {}) {

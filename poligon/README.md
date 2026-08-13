@@ -21,11 +21,22 @@ Django, PostgreSQL, OpenClaw и интерфейс на React.
 В ИИ-ассистент необходимо одновременно загрузить S2T, выбрать Iceberg или
 Parquet и приложить соответствующий комплект SQL-прототипов.
 
+Ассистент поддерживает три сценария:
+
+1. для новой витрины кнопка «Проверить и собрать» запускает создание с нуля;
+2. команда «добавь поток» с вложениями добавляет отсутствующие таблицы в новую
+   ветку `openclaw/update-*`;
+3. команда «обнови» с новым составом S2T пересобирает потоки, в которых появились
+   дополнительные атрибуты.
+
+Для сценариев 2–3 агент сначала спрашивает пространство и название витрины.
+Исходная ветка `main` не изменяется.
+
 ## Запуск
 
 ```bash
-git clone https://github.com/RuslanAyvazov/b2csql-studio.git
-cd b2csql-studio
+git clone https://github.com/RuslanAyvazov/openclaw-ui-integration.git
+cd openclaw-ui-integration/poligon
 cp .env.example .env
 docker compose up --build -d
 ```
