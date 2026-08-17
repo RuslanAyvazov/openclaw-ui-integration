@@ -282,10 +282,18 @@ async function ensureAgent(payload) {
     const { workspace, agentDir } = agentPaths(agentId);
     mkdirSync(workspace, { recursive: true, mode: 0o700 });
     mkdirSync(agentDir, { recursive: true, mode: 0o700 });
+    mkdirSync(join(workspace, 'memory'), { recursive: true, mode: 0o700 });
+    mkdirSync(join(workspace, 'uploads'), { recursive: true, mode: 0o700 });
+    mkdirSync(join(workspace, 'mart-updates'), { recursive: true, mode: 0o700 });
     const sharedSkill = join(home, 'skills', skillName, 'SKILL.md');
     if (!existsSync(sharedSkill)) throw new Error(`Общий навык ${skillName} не установлен.`);
 
-    const values = { AGENT_NAME: agentName, USER_NAME: userName, SKILL_NAME: skillName };
+    const values = {
+        AGENT_ID: agentId,
+        AGENT_NAME: agentName,
+        USER_NAME: userName,
+        SKILL_NAME: skillName,
+    };
     const workspaceTemplates = [
         ['B2C_AGENT.md', 'AGENTS.md'],
         ['IDENTITY.md', 'IDENTITY.md'],
@@ -293,6 +301,10 @@ async function ensureAgent(payload) {
     ];
     for (const [templateName, workspaceName] of workspaceTemplates) {
         atomicWrite(join(workspace, workspaceName), renderTemplate(templateName, values));
+    }
+    const memoryFile = join(workspace, 'MEMORY.md');
+    if (!existsSync(memoryFile)) {
+        atomicWrite(memoryFile, renderTemplate('MEMORY.md', values));
     }
 
     const agents = await listAgents();
